@@ -1,36 +1,23 @@
-# Rails + React + Vite Template
+# The Council
 
-An opinionated starter for React + Rails apps, with authentication, background
-jobs, and cloud storage already wired up so a new project can get going fast.
+A web application where one visitor talks, by voice, with three AI-controlled
+characters: Aphra, Rosa and Claudia. The experience is audio-first, always
+listening once started, and the visitor can interrupt a character at any time.
+The same app runs in a normal browser and as a museum kiosk.
 
-<!-- BEGIN: template setup — delete this whole section once you've done it -->
-
-## Starting a new project from this template
-
-This template uses the placeholder name `RailsReactVite` / `rails_react_vite`.
-Before your first commit, rename it to your project and delete this section.
-
-1. Find every occurrence: `grep -rniI "rails_react_vite\|railsreactvite" . --exclude-dir=node_modules --exclude-dir=.git`
-2. Replace the identifiers (case-sensitive):
-   - `RailsReactVite` → `YourAppName` (the Ruby module in `config/application.rb`)
-   - `rails_react_vite` → `your_app_name` (DB names in `config/database.yml`, Kamal service/image and storage volume in `config/deploy.yml`, Docker tags in `Dockerfile`)
-   - `Rails React Vite` → `Your App Name` (layout `<title>` and PWA name in `app/views/`)
-3. Recreate the databases under the new names: `bin/rails db:drop db:create db:migrate`
-   (skip `db:drop` if you have data you care about).
-4. Delete this section from `README.md` and the matching note in `AGENTS.md`.
-
-<!-- END: template setup -->
+The build plan and architecture live in [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Stack
 
 - **Rails 8** (Ruby 3.3), **PostgreSQL**
 - **React 19** + **Vite 5** (HMR) + **Tailwind CSS 4.3** + **Heroicons** + **React Router**
-- **Devise** for auth, with React login / signup / password views (JSON endpoints)
-- **Solid Queue** on Postgres as the Active Job backend (no Redis)
-- **Active Storage** on **S3-compatible storage** (local disk in development)
+- **Action Cable** on **Solid Cable** for realtime session events (no Redis)
+- **Solid Queue** on Postgres for background jobs (finalization, metrics, cleanup)
+- **Devise** for the admin sign-in, with React login / password views (JSON endpoints)
+- **Active Storage** on **S3-compatible storage** for character avatars (local disk in development)
 - **Alba** for JSON serialization
-- **letter_opener** to preview emails in development
-- **RSpec** for testing, **annotaterb** for schema annotations, **pry-rails**, **dotenv-rails**
+- **OpenAI** (Responses API for dialogue, transcription for speech-to-text) and **ElevenLabs** (text-to-speech), behind replaceable provider adapters
+- **RSpec** for Rails tests, **letter_opener** for dev mail, **annotaterb**, **pry-rails**, **dotenv-rails**
 
 ## Getting started
 
@@ -51,23 +38,34 @@ http://localhost:3000.
 
 ## Environment variables
 
-Configured via `dotenv-rails`; see `.env.example`:
+Configured via `dotenv-rails` in development and test; see `.env.example`.
+Secrets are never stored in the database or editable from the admin.
 
-| Variable                                                                    | Purpose                                                         |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `PASSWORD`                                                                  | Site-wide password gate. Unset/blank disables it (the default). |
-| `MAILER_SENDER`                                                             | Default "from" address for Devise mail                          |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `AWS_BUCKET` | Active Storage S3 (production)                                  |
-| `AWS_ENDPOINT_URL_S3` / `BUCKET_NAME`                                       | Non-AWS S3 providers (Tigris, R2, MinIO, …)                     |
-| `DB_POOL`                                                                   | Active Record pool size. Defaults to `RAILS_MAX_THREADS`.       |
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Dialogue generation (Responses API) and speech-to-text |
+| `ELEVENLABS_API_KEY` | Text-to-speech and the voice list shown in the admin |
+| `LLM_MODEL` | Default dialogue model, seeded into the live configuration (`gpt-5.6-luna`) |
+| `LLM_TIMEOUT_MS` / `STT_TIMEOUT_MS` / `TTS_TIMEOUT_MS` | Per-request provider timeouts |
+| `APP_URL` | Public URL of the deployment, used for mail links and Action Cable origin checks |
+| `ACTION_CABLE_ALLOWED_ORIGINS` | Comma-separated extra origins allowed to open the WebSocket (production) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account created by `bin/rails db:seed` |
+| `ALLOW_SIGNUP` | Set to `true` to expose account signup in production (off by default) |
+| `PASSWORD` | Site-wide password gate for staging and previews. Unset/blank disables it (the default). |
+| `MAILER_SENDER` | Default "from" address for Devise mail |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `AWS_BUCKET` | Active Storage S3 (production) |
+| `AWS_ENDPOINT_URL_S3` / `BUCKET_NAME` | Non-AWS S3 providers (Tigris, R2, MinIO, …) |
+| `DB_POOL` | Active Record pool size. Defaults to `RAILS_MAX_THREADS`. |
+| `SECRET_KEY_BASE` / `RAILS_MASTER_KEY` | Standard Rails secrets, set on the production host only |
 
 ## Authentication
 
-Devise is set up as a JSON API consumed by React:
+The admin UI is protected by Devise, set up as a JSON API consumed by React:
 
 - Endpoints live under `/users/*` via custom controllers in `app/controllers/users/`.
 - React screens are in `app/frontend/pages/` (`Login`, `Signup`, `ForgotPassword`, `ResetPassword`).
 - `GET /current_user` returns the signed-in user; `app/frontend/lib/auth.js` exposes `useAuth()`.
+- Visitors of the conversation itself are anonymous; they never sign in.
 
 ## Site password gate
 
@@ -83,18 +81,32 @@ previews, and unrelated to Devise sign-in.
 
 ## Background jobs
 
-Active Job runs on Solid Queue, backed by the primary Postgres database — no
-Redis, no second service. Worker concurrency is configured in
-`config/queue.yml` and scheduled jobs in `config/recurring.yml`.
+Active Job runs on Solid Queue, backed by the primary Postgres database.
+Worker concurrency is configured in `config/queue.yml` and scheduled jobs in
+`config/recurring.yml`. Nothing on the realtime conversation path (speech
+recognition, dialogue generation, speech synthesis) goes through Active Job.
 
 ```bash
 bin/jobs                  # run workers (bin/dev already does this)
 ```
 
-In production you can either run `bin/jobs` as its own process or set
-`SOLID_QUEUE_IN_PUMA=true` to run the supervisor inside the web process. If you
-do the latter, raise `DB_POOL` above `RAILS_MAX_THREADS` so workers and Puma
-aren't fighting over the same connections.
+## Deployment (Fly.io)
+
+`fly.toml` defines two process groups built from the `Dockerfile`: `app`
+(Puma behind Thruster) and `worker` (`bin/jobs`). Migrations run as the
+release command.
+
+```bash
+fly launch --no-deploy --copy-config      # first time: creates the app, attach a Postgres cluster
+fly secrets set RAILS_MASTER_KEY=… OPENAI_API_KEY=… ELEVENLABS_API_KEY=… \
+  AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=… AWS_BUCKET=… APP_URL=https://<app>.fly.dev
+fly deploy
+fly ssh console -C "bin/rails db:seed"    # creates the admin from ADMIN_EMAIL / ADMIN_PASSWORD
+```
+
+Keep a single `app` machine running during an exhibition: in-flight dialogue
+generation lives in the Puma process, and a restart makes the client ask for
+that segment again.
 
 ## Testing
 
@@ -122,5 +134,4 @@ bundle exec annotaterb models  # refresh model schema annotations
 - **test** — RSpec against a Postgres service, after a Vite build (request
   specs render the layout, which needs the asset manifest)
 
-There are no system/browser tests yet; add `test:system` (and a browser)
-back to the `test` job if you introduce them.
+Browser tests (Playwright) are added in a later slice of the plan.

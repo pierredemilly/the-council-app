@@ -58,7 +58,12 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  app_url = URI.parse(ENV.fetch("APP_URL", "https://example.com"))
+  config.action_mailer.default_url_options = { host: app_url.host, protocol: app_url.scheme }
+
+  # The SPA opens the WebSocket from APP_URL; extra origins are opt-in.
+  config.action_cable.allowed_request_origins =
+    [ app_url.origin, *ENV.fetch("ACTION_CABLE_ALLOWED_ORIGINS", "").split(",") ].map(&:strip).reject(&:blank?)
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
   # config.action_mailer.smtp_settings = {

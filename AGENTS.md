@@ -1,14 +1,8 @@
-# Rails React Vite Template — AI Assistant Guide
+# The Council — AI Assistant Guide
 
 > `CLAUDE.md` and `.github/copilot-instructions.md` are symlinks to this file, so Claude Code, GitHub Copilot, and Codex all read the same source of truth.
 
-Rails 8 + React 19 + Vite starter with authentication, background jobs, and cloud storage wired up.
-
-<!-- BEGIN: template setup — delete this note (and the matching README section) once the rename is done -->
-
-> **Fresh clone?** This is still the template: the app is named with the placeholder `RailsReactVite` / `rails_react_vite`. Before building features, rename it to the real project — see "Starting a new project from this template" in `README.md` — then delete this note. If you're an agent and the placeholder name is still present, ask the user what to rename it to before generating new code that hard-codes it.
-
-<!-- END: template setup -->
+Rails 8 + React 19 + Vite app where one visitor talks by voice with three AI characters (Aphra, Rosa, Claudia). Architecture, data model, realtime protocol and the slice-by-slice plan are in `docs/PLAN.md`; read it before touching conversation code.
 
 ## Tech Stack
 
@@ -24,7 +18,10 @@ Rails 8 + React 19 + Vite starter with authentication, background jobs, and clou
 | Serialization    | Alba                                                                    |
 | Mail (dev)       | letter_opener                                                          |
 | Config           | dotenv-rails (`.env`, see `.env.example`)                              |
-| Testing          | RSpec (`rspec-rails`)                                                  |
+| Realtime         | Action Cable on Solid Cable, one `ConversationChannel` per session      |
+| AI providers     | OpenAI (LLM + STT), ElevenLabs (TTS), behind `Providers::*` adapters    |
+| Deployment       | Fly.io (`fly.toml`, `Dockerfile`)                                       |
+| Testing          | RSpec (`rspec-rails`), Playwright for browser flows                    |
 | Linting / tools  | RuboCop (rails-omakase), Brakeman, ESLint 9, Prettier 3, annotaterb, pry-rails |
 | Node             | 22.14 (`.node-version`)                                               |
 
