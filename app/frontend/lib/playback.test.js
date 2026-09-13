@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SimulatedPlayer } from "~/lib/playback";
 
 describe("SimulatedPlayer", () => {
-  beforeEach(() => vi.useFakeTimers());
+  beforeEach(() =>
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] })
+  );
   afterEach(() => vi.useRealTimers());
 
   it("pauses and resumes without losing the remaining duration", async () => {
