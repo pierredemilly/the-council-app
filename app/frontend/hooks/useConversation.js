@@ -12,6 +12,8 @@ import {
 } from "~/lib/session";
 
 const HEARTBEAT_MS = 30_000;
+const AUTO_RECONNECT_MS = 60_000;
+const KIOSK_RESET_DELAY_MS = 4_000;
 const PROGRESS_MS = 1_000;
 const CAPTION_MS = 100;
 
@@ -21,6 +23,7 @@ export default function useConversation({ clientMode }) {
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [micState, setMicState] = useState("off");
   const [userSpeaking, setUserSpeaking] = useState(false);
+  const [reconnectExpired, setReconnectExpired] = useState(false);
   const mic = useRef(null);
   const interruptTimer = useRef(null);
   const interruptedByVoice = useRef(false);
@@ -252,6 +255,11 @@ export default function useConversation({ clientMode }) {
     [interrupt]
   );
 
+  const retryConnection = useCallback(() => {
+    setReconnectExpired(false);
+    channel.current?.reconnect();
+  }, []);
+
   const retry = useCallback(() => {
     dispatch({ type: "CLEAR_ERROR" });
     send("turn.request", {});
@@ -341,6 +349,22 @@ export default function useConversation({ clientMode }) {
     send,
   ]);
 
+  // Network loss: hold the loudspeaker, let Action Cable retry, and offer a manual retry after a minute.
+  useEffect(() => {
+    if (!state.session || state.phase === "finalized") return undefined;
+    if (state.connection === "connected") {
+      setReconnectExpired(false);
+      player.current.resume();
+      return undefined;
+    }
+    player.current.pause();
+    const timer = setTimeout(
+      () => setReconnectExpired(true),
+      AUTO_RECONNECT_MS
+    );
+    return () => clearTimeout(timer);
+  }, [state.session, state.connection, state.phase]);
+
   useEffect(() => {
     if (!state.session || state.connection !== "connected") return undefined;
     const timer = setInterval(() => send("client.heartbeat", {}), HEARTBEAT_MS);
@@ -348,10 +372,13 @@ export default function useConversation({ clientMode }) {
   }, [state.session, state.connection, send]);
 
   useEffect(() => {
-    if (state.phase !== "finalized") return;
+    if (state.phase !== "finalized") return undefined;
     clearStoredSession();
     stopMicrophone();
-  }, [state.phase, stopMicrophone]);
+    if (clientMode !== "kiosk") return undefined;
+    const timer = setTimeout(leave, KIOSK_RESET_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [state.phase, stopMicrophone, clientMode, leave]);
 
   return {
     state,
@@ -359,12 +386,14 @@ export default function useConversation({ clientMode }) {
     audioBlocked,
     micState,
     userSpeaking,
+    reconnectExpired,
     unlockAudio,
     startMic,
     start,
     speak,
     interrupt,
     retry,
+    retryConnection,
     leave,
   };
 }

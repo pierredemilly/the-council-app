@@ -27,7 +27,8 @@ module Conversation
 
     def synthesize(turn)
       voice = voice_for(turn.speaker)
-      result = @session.snapshot.retry_policy.run { @tts.synthesize(text: turn.text, voice_id: voice, language: @session.language) }
+      log = ->(error, attempt) { ProviderError.record!(session: @session, stage: "tts", provider: @session.snapshot.tts_provider, error: error, attempt: attempt) }
+      result = @session.snapshot.retry_policy.run(on_error: log) { @tts.synthesize(text: turn.text, voice_id: voice, language: @session.language) }
       ready_at = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
 
       stored = SessionStore.with_lock(@session.id, expected_version: @version) do |locked|

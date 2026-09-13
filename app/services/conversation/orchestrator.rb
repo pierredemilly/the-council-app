@@ -97,6 +97,7 @@ module Conversation
 
         turn.update!(status: "playing", duration_ms: turn.duration_ms || duration_ms)
         locked.update!(status: "speaking", last_activity_at: Time.current)
+        stamp_first_audio!(locked) if turn.position.zero?
       end
       session.reload
       broadcast("state.changed", status: "speaking", speaker: current_speaker) if session.status == "speaking"
@@ -152,11 +153,12 @@ module Conversation
 
         locked.turns.pending_playback.update_all(status: "discarded")
         locked.audio_clips.delete_all
-        locked.update!(status: "finalized", finalized_at: Time.current, finalize_reason: reason, metrics: locked.metrics.merge(Metrics.summarize(locked)))
+        locked.update!(status: "finalized", finalized_at: Time.current, finalize_reason: reason)
         SessionStore.advance_version!(locked)
       end
       session.reload
       broadcast("state.changed", status: "finalized", reason: reason)
+      AggregateSessionMetricsJob.perform_later(session.id)
     end
 
     def heartbeat!
@@ -176,6 +178,14 @@ module Conversation
     end
 
     private
+
+    # Time from the visitor's line to the first audible word of the answer, as reported by the browser.
+    def stamp_first_audio!(locked)
+      trigger = locked.events.where(kind: "human").order(:seq).last
+      return unless trigger && trigger.latency["first_audio_ms"].nil?
+
+      trigger.update!(latency: trigger.latency.merge("first_audio_ms" => ((Time.current - trigger.occurred_at) * 1000).round))
+    end
 
     def discard_pending!(locked)
       pending = locked.turns.pending_playback

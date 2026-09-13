@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   ArrowPathIcon,
   ComputerDesktopIcon,
+  SignalSlashIcon,
   MicrophoneIcon,
   SpeakerWaveIcon,
   XMarkIcon,
@@ -33,12 +34,14 @@ export default function Conversation() {
     audioBlocked,
     micState,
     userSpeaking,
+    reconnectExpired,
     unlockAudio,
     startMic,
     start,
     speak,
     interrupt,
     retry,
+    retryConnection,
     leave,
   } = useConversation({ clientMode });
   const [publicConfig, setPublicConfig] = useState(null);
@@ -110,6 +113,25 @@ export default function Conversation() {
                 </button>
               )}
             </div>
+            {reconnecting && (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-stone-500/10 px-4 py-3 ring-1 ring-stone-400/40">
+                <p className="flex items-center gap-2 text-sm text-stone-300">
+                  <SignalSlashIcon className="h-4 w-4" />
+                  {reconnectExpired
+                    ? t("conversation.connection_lost")
+                    : t("conversation.reconnecting_hint")}
+                </p>
+                {reconnectExpired && (
+                  <button
+                    onClick={retryConnection}
+                    className="flex items-center gap-2 rounded-full bg-stone-200 px-4 py-2 text-sm font-semibold text-stone-900"
+                  >
+                    <ArrowPathIcon className="h-4 w-4" />
+                    {t("conversation.retry_connection")}
+                  </button>
+                )}
+              </div>
+            )}
             {state.phase === "finalized" && (
               <p className="text-stone-300">{t("conversation.finished")}</p>
             )}

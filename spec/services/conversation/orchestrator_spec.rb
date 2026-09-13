@@ -1,6 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Conversation::Orchestrator do
+  include ActiveJob::TestHelper
   let(:session) { create_conversation }
   let(:orchestrator) { described_class.new(session) }
 
@@ -168,11 +169,12 @@ RSpec.describe Conversation::Orchestrator do
       orchestrator.start_from_utterance!(text: "Hello")
       orchestrator.playback_completed!(turns.first.id)
 
-      orchestrator.finalize!("inactivity")
+      perform_enqueued_jobs { orchestrator.finalize!("inactivity") }
 
       session.reload
       expect(session).to have_attributes(status: "finalized", finalize_reason: "inactivity")
       expect(session.metrics).to include("human_turns" => 1, "agent_turns" => 1, "interruptions" => 0)
+      expect(session.metrics["latency"]).to be_a(Hash)
       expect(session.turns.pending_playback).to be_empty
       expect(broadcasts_for(session).last["payload"]).to eq("status" => "finalized", "reason" => "inactivity")
       expect { orchestrator.request_turn! }.to raise_error(Conversation::Inactive)

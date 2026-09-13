@@ -117,5 +117,8 @@ export const fr = {
       denied: "Micro indisponible : écrivez plutôt",
       retry: "Autoriser le micro",
     },
+    reconnecting_hint: "Connexion perdue, nouvelle tentative…",
+    connection_lost: "Toujours pas de connexion.",
+    retry_connection: "Réessayer la connexion",
   },
 };

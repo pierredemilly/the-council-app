@@ -19,14 +19,14 @@ module Conversation
 
       loop do
         attempts += 1
-        envelope = @snapshot.retry_policy.run { @llm.complete(input, feedback: feedback) }
+        envelope = @snapshot.retry_policy.run(on_error: error_logger("llm", @snapshot.llm_provider)) { @llm.complete(input, feedback: feedback) }
         accumulate(usage, envelope.usage)
         begin
           segment = ScriptParser.parse(envelope, agent_names: @snapshot.agent_names, max_turns: @snapshot.max_ai_turns, stage_directions: input.stage_directions)
           latency_ms = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond) - started
           return Result.new(segment: segment, attempts: attempts, latency_ms: latency_ms, usage: usage)
         rescue ScriptParser::Invalid => e
-          Rails.logger.info("[conversation] rejected script for #{@session.id} (attempt #{attempts}): #{e.message}")
+          ProviderError.record!(session: @session, stage: "parse", provider: @snapshot.llm_provider, error: e, attempt: attempts)
           raise Providers::Error.new("The model kept producing an invalid script: #{e.message}", recoverable: true) if attempts > @snapshot.retry_count
 
           feedback = e.message
@@ -46,6 +46,10 @@ module Conversation
         fallback_language: @snapshot.fallback_language,
         stage_directions: @tts.stage_directions
       )
+    end
+
+    def error_logger(stage, provider)
+      ->(error, attempt) { ProviderError.record!(session: @session, stage: stage, provider: provider, error: error, attempt: attempt) }
     end
 
     def accumulate(total, usage)

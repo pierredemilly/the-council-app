@@ -36,6 +36,10 @@ export function subscribeToConversation({
         payload,
       });
     },
+    // Forces a fresh socket after the automatic backoff has given up or stalled.
+    reconnect() {
+      sharedConsumer().connection.reopen();
+    },
     close() {
       subscription.unsubscribe();
     },

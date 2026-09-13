@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_140001) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_140002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -128,6 +128,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_140001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["status", "last_seen_at"], name: "index_conversation_sessions_on_status_and_last_seen_at"
+  end
+
+  create_table "provider_errors", force: :cascade do |t|
+    t.uuid "conversation_session_id"
+    t.string "stage", null: false
+    t.string "provider", null: false
+    t.integer "attempt", default: 1, null: false
+    t.boolean "recoverable", default: true, null: false
+    t.string "message", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_session_id"], name: "index_provider_errors_on_conversation_session_id"
+    t.index ["stage", "created_at"], name: "index_provider_errors_on_stage_and_created_at"
   end
 
   create_table "session_turns", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -306,6 +319,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_140001) do
   add_foreign_key "audio_clips", "conversation_sessions"
   add_foreign_key "audio_clips", "session_turns"
   add_foreign_key "conversation_events", "conversation_sessions"
+  add_foreign_key "provider_errors", "conversation_sessions"
   add_foreign_key "session_turns", "conversation_sessions"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
