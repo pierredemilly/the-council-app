@@ -8,6 +8,18 @@ describe("captions", () => {
     );
   });
 
+  it("drops cues glued to punctuation or words", () => {
+    expect(displayText("Well,[chuckles] no. [sighs], really [laughs].")).toBe(
+      "Well, no. really"
+    );
+  });
+
+  it("drops cues that span several words", () => {
+    expect(displayText("Oh [ laughs softly ] stop it [pause")).toBe(
+      "Oh stop it"
+    );
+  });
+
   it("keeps word timings aligned after removing cues", () => {
     const timings = [
       { word: "[laughs]", start_ms: 0, end_ms: 10 },
