@@ -5,8 +5,10 @@ namespace :e2e do
     AppConfig.current.update!(
       llm_provider: "fake", tts_provider: "fake", stt_provider: "fake",
       stt_settings: { "fake_text" => "Hello from the fake microphone" },
-      inactivity_reset_seconds: 30, resume_window_seconds: 60, yield_grace_ms: 500
+      inactivity_reset_seconds: 30, resume_window_seconds: 60, yield_grace_ms: 500,
+      vad_settings: AppConfig::DEFAULT_VAD_SETTINGS
     )
+    User.find_or_create_by!(email: "admin@example.com") { |user| user.password = "password123" }
     Agent.ordered.each_with_index { |agent, index| agent.update!(voice_id: %w[fake-alto fake-mezzo fake-tenor][index]) }
     ConversationSession.destroy_all
   end

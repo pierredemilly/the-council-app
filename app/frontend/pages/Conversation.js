@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  AdjustmentsHorizontalIcon,
   ArrowPathIcon,
   ComputerDesktopIcon,
   SignalSlashIcon,
@@ -14,9 +15,11 @@ import MicIndicator from "~/components/MicIndicator";
 import StatusPill from "~/components/StatusPill";
 import TextComposer from "~/components/TextComposer";
 import TranscriptPanel from "~/components/TranscriptPanel";
+import VadTuner from "~/components/VadTuner";
 import useConversation from "~/hooks/useConversation";
 import useQueryFlag from "~/hooks/useQueryFlag";
 import { api } from "~/lib/api";
+import { useAuth } from "~/lib/auth";
 import { isReconnecting } from "~/lib/conversationMachine";
 import { t } from "~/i18n";
 
@@ -53,9 +56,13 @@ export default function Conversation() {
     retry,
     retryConnection,
     leave,
+    tuneVad,
+    readSpeechProbability,
   } = useConversation({ clientMode });
+  const { user } = useAuth();
   const [publicConfig, setPublicConfig] = useState(null);
   const [startError, setStartError] = useState(null);
+  const [tunerOpen, setTunerOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -73,6 +80,18 @@ export default function Conversation() {
       ? "user_speaking"
       : state.phase;
   const active = state.session && state.phase !== "idle";
+
+  const tunerButton = user && (
+    <button
+      type="button"
+      onClick={() => setTunerOpen((open) => !open)}
+      aria-pressed={tunerOpen}
+      className="flex items-center gap-1 rounded-full bg-stone-800/80 px-3 py-1.5 text-stone-300 ring-1 ring-stone-600 backdrop-blur hover:text-stone-100"
+    >
+      <AdjustmentsHorizontalIcon className="h-4 w-4" />
+      {t("conversation.tune.open")}
+    </button>
+  );
 
   const handleStart = async () => {
     setStartError(null);
@@ -197,12 +216,26 @@ export default function Conversation() {
         )}
       </main>
 
+      {user && kiosk && (
+        <div className="fixed right-4 bottom-4 z-20">{tunerButton}</div>
+      )}
+      {user && tunerOpen && (
+        <VadTuner
+          onClose={() => setTunerOpen(false)}
+          tuneVad={tuneVad}
+          readSpeechProbability={readSpeechProbability}
+          userSpeaking={userSpeaking}
+          micState={micState}
+        />
+      )}
+
       {!kiosk && (
         <footer className="flex items-center justify-between text-xs text-stone-500">
           <Link to="/admin" className="hover:text-stone-300">
             {t("conversation.admin")}
           </Link>
           <div className="flex items-center gap-3">
+            {tunerButton}
             {active && state.phase !== "finalized" && (
               <button
                 onClick={leave}

@@ -5,6 +5,13 @@ and echo. These settings are sliders in the admin (Settings → Voice activity
 detection) and take effect for new conversations; tune them on site with the
 real hardware. Each slider shows its value and a reset link back to the default.
 
+For on-site work, sign in to the admin, then open the public page (kiosk mode
+included): a **Voice detection** button appears in the bottom-right corner. Its
+panel carries the same sliders plus a live speech-probability meter with the two
+thresholds marked. Moving a slider changes the running microphone at once, for
+this browser only; **Save as default** persists the values for every new
+conversation, **Revert** goes back to the saved ones.
+
 ## What the settings mean
 
 | Setting | Default | Effect |
@@ -22,9 +29,11 @@ and the red indicator is always visible while it is live.
 
 ## Procedure
 
-1. Open the kiosk URL (`/?kiosk=true`) on the installation computer with the
-   real microphone and loudspeakers, start a conversation and speak normally
-   from the visitor position. Confirm the "You're speaking" status appears and
+1. Sign in to the admin on the installation computer, then open the kiosk URL
+   (`/?kiosk=true`) with the real microphone and loudspeakers, open the
+   **Voice detection** panel, start a conversation and speak normally from the
+   visitor position. Watch the meter: your voice should push it past the red
+   mark, silence should stay under the grey one. Confirm the "You're speaking" status appears and
    disappears with your voice and that nothing triggers while you stay silent.
 2. Let the characters answer at exhibition volume. If the status flickers to
    "You're speaking" during playback without anyone talking, raise
@@ -38,6 +47,6 @@ and the red indicator is always visible while it is live.
    finish, lower it.
 5. Check the transcript for cut first syllables and raise `pre_speech_pad_ms`
    if needed.
-6. Save the settings in the admin and start a fresh conversation to confirm.
+6. Press **Save as default** in the panel and start a fresh conversation to confirm.
    Note the final values in the installation log; `bin/rails runner
    'puts AppConfig.current.vad_settings'` prints them.

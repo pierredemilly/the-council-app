@@ -174,5 +174,20 @@ export const en = {
     retry_connection: "Retry connection",
     text_only: "Text only",
     sound_on: "Sound on",
+    tune: {
+      open: "Voice detection",
+      title: "Voice detection, live",
+      hint_live:
+        "Changes apply to this microphone at once. Save to make them the default for every new conversation.",
+      hint_idle:
+        "Start a conversation to hear the effect. Saved values apply to every new conversation.",
+      meter: "Speech probability",
+      speech_detected: "Speech detected",
+      save: "Save as default",
+      saved: "Saved.",
+      unsaved: "Applied here, not saved yet.",
+      revert: "Revert",
+      close: "Close",
+    },
   },
 };

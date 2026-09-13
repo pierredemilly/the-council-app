@@ -9,6 +9,7 @@ import Field, {
 import JsonField from "~/components/JsonField";
 import SaveBar from "~/components/SaveBar";
 import SliderField from "~/components/SliderField";
+import { VAD_SLIDERS } from "~/components/VadTuner";
 import FormError from "~/components/FormError";
 import { t } from "~/i18n";
 
@@ -22,16 +23,6 @@ function Section({ title, children }) {
 }
 
 const toOptions = (values) => values.map((v) => ({ value: v, label: v }));
-
-// Stored as JSON in vad_settings; the admin only ever sees sliders.
-const VAD_SLIDERS = [
-  { key: "positive_speech_threshold", step: 0.05, unit: "" },
-  { key: "negative_speech_threshold", step: 0.05, unit: "" },
-  { key: "min_speech_ms", step: 10, unit: " ms" },
-  { key: "redemption_ms", step: 50, unit: " ms" },
-  { key: "pre_speech_pad_ms", step: 10, unit: " ms" },
-  { key: "interrupt_min_speech_ms", step: 50, unit: " ms" },
-];
 
 export default function Settings() {
   const [saved, setSaved] = useState(null);

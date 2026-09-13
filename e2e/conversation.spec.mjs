@@ -112,3 +112,35 @@ test("losing the network shows reconnecting, then recovers without duplicating t
   });
   expect(await page.locator(TRANSCRIPT).innerText()).toBe(before);
 });
+
+test("a signed-in admin tunes voice detection live and saves it as the default", async ({
+  page,
+}) => {
+  await openFresh(page, "/?simulateAudio=true");
+  await expect(
+    page.getByRole("button", { name: "Voice detection" })
+  ).toHaveCount(0);
+
+  await page.goto("/login");
+  await page.fill("input[type=email]", "admin@example.com");
+  await page.fill("input[type=password]", "password123");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/admin/);
+
+  await page.goto("/?simulateAudio=true");
+  await page.getByRole("button", { name: "Voice detection" }).click();
+  const panel = page.getByRole("complementary", {
+    name: "Voice detection, live",
+  });
+  const threshold = panel.locator("input[type=range]").first();
+  await expect(threshold).toHaveValue("0.5");
+  await threshold.focus();
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press("ArrowRight");
+  await expect(threshold).toHaveValue("0.7");
+  await expect(panel.getByText("Applied here, not saved yet.")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Save as default" }).click();
+  await expect(panel.getByText("Saved.")).toBeVisible();
+  const config = await (await page.request.get("/api/admin/config")).json();
+  expect(config.config.vad_settings.positive_speech_threshold).toBe(0.7);
+});
