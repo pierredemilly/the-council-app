@@ -113,6 +113,8 @@ Feedback round 1 (conversation behaviour): `next_action` gains `continue` for pa
 
 Feedback round 1 (admin): VAD settings are sliders bounded by `AppConfig::VAD_RANGES` (validated server-side too, with negative ≤ positive), still stored as JSON. Agents carry a `color` (palette default by position) used for transcript names and avatar glow. `/admin/sessions` lists recent conversations and `/admin/sessions/:id` shows the transcript with latency, metrics and provider errors, copies it as script text, or deletes the session.
 
+Feedback round 2 (pacing): `continue` no longer triggers generation server-side; the segment ends `listening` with `nextAction: continue` and the browser waits `continue_grace_ms` (default 2 s) before `turn.request`, as it waits `yield_grace_ms` (default now 5 s) after a yield. `request_turn!` refuses once `max_unprompted_segments` (default 2) passages have been spoken since the visitor's last line and reports `wait_for_user` instead, so the group cannot talk to itself indefinitely. The prompt tells the model that one or two lines are often enough.
+
 ## 5. Frontend layout
 
 ```

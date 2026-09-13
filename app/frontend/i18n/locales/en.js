@@ -49,7 +49,7 @@ export const en = {
         "A closed page can resume its conversation for this long.",
       yield_grace_ms: "Yield grace period (ms)",
       yield_grace_ms_hint:
-        "Silence tolerated after a natural opening before the characters carry on.",
+        "Silence left after a natural pause before the characters carry on by themselves.",
       retries: "Provider retries",
       retry_count: "Retry count",
       retry_base_ms: "Base backoff (ms)",
@@ -88,6 +88,12 @@ export const en = {
         interrupt_min_speech_ms_hint:
           "Continuous speech needed, while a character talks, before the interruption is confirmed.",
       },
+      continue_grace_ms: "Pause before answering each other (ms)",
+      continue_grace_ms_hint:
+        "Silence left after a line aimed at another character before the group answers it. Long enough for the visitor to step in.",
+      max_unprompted_segments: "Segments without the visitor",
+      max_unprompted_segments_hint:
+        "How many passages the characters may chain among themselves before they stop and wait for the visitor.",
     },
     characters: {
       title: "Characters",

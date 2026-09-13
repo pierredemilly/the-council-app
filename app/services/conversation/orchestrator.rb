@@ -31,7 +31,7 @@ module Conversation
         config: session.snapshot.public_payload,
         events: ConversationEventSerializer.new(session.events.ordered).serializable_hash,
         pendingTurns: SessionTurnSerializer.new(session.turns.for_version(session.version).where(status: %w[ready playing]).ordered).serializable_hash,
-        nextAction: last_next_action,
+        nextAction: effective_next_action,
         resumeDeadline: session.resume_deadline.iso8601
       }
     end
@@ -111,7 +111,6 @@ module Conversation
       ensure_active!
       event = nil
       finished_segment = false
-      carry_on = false
       SessionStore.with_lock(session.id) do |locked|
         turn = locked.turns.for_version(locked.version).find_by(id: turn_id)
         next unless turn && %w[ready playing].include?(turn.status)
@@ -121,29 +120,25 @@ module Conversation
         turn.audio_clip&.delete
         if turn.last_in_segment?
           finished_segment = true
-          carry_on = turn.next_action == "continue"
-          locked.status = carry_on ? "processing" : "listening"
-          SessionStore.advance_version!(locked) if carry_on
-          locked.save!
+          locked.update!(status: "listening")
         end
       end
       return unless event
 
       session.reload
       broadcast("transcript.committed", event: serialize(event))
-      if carry_on
-        # The last line was aimed at another character: the group answers without waiting for the visitor.
-        broadcast("state.changed", status: "processing")
-        SegmentRunner.enqueue(session.id, session.version)
-      elsif finished_segment
-        broadcast("state.changed", status: "listening", nextAction: last_next_action)
-      end
+      broadcast("state.changed", status: "listening", nextAction: effective_next_action) if finished_segment
       event
     end
 
-    # After a yield grace period, or when the visitor retries after an error.
+    # After a yield or continue grace period, or when the visitor retries after an error.
     def request_turn!
       ensure_active!
+      if session.status == "listening" && unprompted_cap_reached?
+        broadcast("state.changed", status: "listening", nextAction: "wait_for_user")
+        return
+      end
+
       started = SessionStore.with_lock(session.id) do |locked|
         next false unless %w[listening errored].include?(locked.status) && locked.events.exists?(kind: "human")
 
@@ -228,6 +223,25 @@ module Conversation
 
       session.turns.for_version(session.version).where(status: "spoken").ordered.last&.next_action ||
         session.turns.where(status: "spoken").order(:created_at, :position).last&.next_action
+    end
+
+    # The group may chain only so many passages without the visitor; past the cap it waits.
+    def effective_next_action
+      action = last_next_action
+      return action if action.nil? || action == "wait_for_user"
+
+      unprompted_cap_reached? ? "wait_for_user" : action
+    end
+
+    def unprompted_cap_reached?
+      segments_since_visitor >= session.snapshot.max_unprompted_segments.to_i
+    end
+
+    def segments_since_visitor
+      last_human = session.events.where(kind: "human").order(:seq).last
+      scope = session.turns.where(status: "spoken")
+      scope = scope.where("session_turns.updated_at > ?", last_human.occurred_at) if last_human
+      scope.distinct.count(:generation_id)
     end
   end
 end

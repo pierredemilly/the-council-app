@@ -50,7 +50,7 @@ export const fr = {
         "Une page fermée peut reprendre sa conversation pendant cette durée.",
       yield_grace_ms: "Délai de grâce (ms)",
       yield_grace_ms_hint:
-        "Silence toléré après une ouverture naturelle avant que les personnages reprennent.",
+        "Silence laissé après une pause naturelle avant que les personnages reprennent d’eux-mêmes.",
       retries: "Nouvelles tentatives",
       retry_count: "Nombre de tentatives",
       retry_base_ms: "Attente de base (ms)",
@@ -90,6 +90,12 @@ export const fr = {
         interrupt_min_speech_ms_hint:
           "Parole continue nécessaire, pendant qu’un personnage parle, pour confirmer l’interruption.",
       },
+      continue_grace_ms: "Pause avant de se répondre (ms)",
+      continue_grace_ms_hint:
+        "Silence laissé après une réplique adressée à un autre personnage avant que le groupe y réponde. Assez long pour que le visiteur intervienne.",
+      max_unprompted_segments: "Segments sans le visiteur",
+      max_unprompted_segments_hint:
+        "Nombre de passages que les personnages peuvent enchaîner entre eux avant de s’arrêter et d’attendre le visiteur.",
     },
     characters: {
       title: "Personnages",
