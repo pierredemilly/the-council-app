@@ -1,6 +1,6 @@
 module ConversationHelpers
-  def create_conversation(client_mode: "browser", llm_provider: "fake", tts_provider: "fake")
-    AppConfig.current.update!(llm_provider: llm_provider, tts_provider: tts_provider)
+  def create_conversation(client_mode: "browser", llm_provider: "fake", tts_provider: "fake", stt_provider: "fake")
+    AppConfig.current.update!(llm_provider: llm_provider, tts_provider: tts_provider, stt_provider: stt_provider)
     Agent.find_or_create_by!(position: 1) { |a| a.name = "Aphra"; a.voice_id = "fake-alto" }
     Agent.find_or_create_by!(position: 2) { |a| a.name = "Rosa"; a.voice_id = "fake-mezzo" }
     Agent.find_or_create_by!(position: 3) { |a| a.name = "Claudia"; a.voice_id = "fake-tenor" }

@@ -8,6 +8,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import AvatarStage from "~/components/AvatarStage";
+import MicIndicator from "~/components/MicIndicator";
 import StatusPill from "~/components/StatusPill";
 import TextComposer from "~/components/TextComposer";
 import TranscriptPanel from "~/components/TranscriptPanel";
@@ -30,7 +31,10 @@ export default function Conversation() {
     state,
     positionMs,
     audioBlocked,
+    micState,
+    userSpeaking,
     unlockAudio,
+    startMic,
     start,
     speak,
     interrupt,
@@ -49,7 +53,11 @@ export default function Conversation() {
 
   const agents = state.config?.agents ?? publicConfig?.agents ?? [];
   const reconnecting = isReconnecting(state);
-  const phase = reconnecting ? "reconnecting" : state.phase;
+  const phase = reconnecting
+    ? "reconnecting"
+    : userSpeaking
+      ? "user_speaking"
+      : state.phase;
   const active = state.session && state.phase !== "idle";
 
   const handleStart = async () => {
@@ -90,7 +98,18 @@ export default function Conversation() {
 
         {active && (
           <div className="flex w-full max-w-3xl flex-col items-center gap-5">
-            <StatusPill phase={phase} />
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <StatusPill phase={phase} />
+              <MicIndicator micState={micState} userSpeaking={userSpeaking} />
+              {micState === "denied" && (
+                <button
+                  onClick={startMic}
+                  className="text-xs text-sky-300 underline-offset-2 hover:underline"
+                >
+                  {t("conversation.mic.retry")}
+                </button>
+              )}
+            </div>
             {state.phase === "finalized" && (
               <p className="text-stone-300">{t("conversation.finished")}</p>
             )}

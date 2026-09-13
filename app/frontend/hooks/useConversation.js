@@ -3,6 +3,7 @@ import { api } from "~/lib/api";
 import { subscribeToConversation } from "~/lib/cable";
 import { initialState, playableTurn, reducer } from "~/lib/conversationMachine";
 import AudioPlayer, { SimulatedPlayer } from "~/lib/playback";
+import { startMicrophone } from "~/lib/vad";
 import { readFlag } from "~/hooks/useQueryFlag";
 import {
   clearStoredSession,
@@ -18,6 +19,11 @@ export default function useConversation({ clientMode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [positionMs, setPositionMs] = useState(0);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [micState, setMicState] = useState("off");
+  const [userSpeaking, setUserSpeaking] = useState(false);
+  const mic = useRef(null);
+  const interruptTimer = useRef(null);
+  const interruptedByVoice = useRef(false);
   const channel = useRef(null);
   const player = useRef(null);
   const graceTimer = useRef(null);
@@ -39,13 +45,22 @@ export default function useConversation({ clientMode }) {
     return session ? { "X-Session-Token": session.token } : {};
   }, []);
 
+  const stopMicrophone = useCallback(() => {
+    clearTimeout(interruptTimer.current);
+    mic.current?.destroy();
+    mic.current = null;
+    setMicState("off");
+    setUserSpeaking(false);
+  }, []);
+
   const disconnect = useCallback(() => {
     channel.current?.close();
     channel.current = null;
     player.current.stop();
+    stopMicrophone();
     clearTimeout(graceTimer.current);
     clearTimeout(idleTimer.current);
-  }, []);
+  }, [stopMicrophone]);
 
   const connect = useCallback(
     (session) => {
@@ -71,13 +86,113 @@ export default function useConversation({ clientMode }) {
     return ok;
   }, []);
 
+  const interrupt = useCallback(() => {
+    clearTimeout(graceTimer.current);
+    const stopped = player.current.stop();
+    if (stopped) {
+      send("speech.started", stopped);
+    } else if (["speaking", "processing"].includes(stateRef.current.phase)) {
+      send("speech.started", {});
+    }
+    player.current.forget(stateRef.current.queue.map((t) => t.id));
+    dispatch({ type: "LOCAL_INTERRUPT" });
+  }, [send]);
+
+  const uploadUtterance = useCallback(
+    async (blob) => {
+      const session = stateRef.current.session;
+      if (!session) return;
+      const body = new FormData();
+      body.append("audio", blob, "utterance.wav");
+      const res = await fetch(`/api/sessions/${session.id}/utterances`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Session-Token": session.token,
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
+            ?.content,
+        },
+        body,
+      });
+      if (res.ok) return;
+      const data = await res.json().catch(() => ({}));
+      // Nothing usable was said: pick the conversation back up instead of leaving a silence.
+      if (data.code === "no_speech" && interruptedByVoice.current)
+        send("turn.request", {});
+      if (data.code === "transcription_failed")
+        dispatch({
+          type: "SERVER_MESSAGE",
+          message: {
+            protocolVersion: 1,
+            type: "error.recoverable",
+            version: stateRef.current.version,
+            payload: { code: data.code, message: data.error, retryable: true },
+          },
+        });
+    },
+    [send]
+  );
+
+  // Voice activity: pause the speaker at once, treat sustained speech as an interruption.
+  const handleSpeechStart = useCallback(() => {
+    setUserSpeaking(true);
+    clearTimeout(graceTimer.current);
+    interruptedByVoice.current = false;
+    if (player.current.position()) {
+      player.current.pause();
+      const debounce =
+        stateRef.current.config?.vad_settings?.interrupt_min_speech_ms ?? 300;
+      interruptTimer.current = setTimeout(() => {
+        interruptedByVoice.current = true;
+        interrupt();
+      }, debounce);
+    }
+  }, [interrupt]);
+
+  const handleMisfire = useCallback(() => {
+    clearTimeout(interruptTimer.current);
+    setUserSpeaking(false);
+    player.current.resume();
+  }, []);
+
+  const handleSpeechEnd = useCallback(
+    (blob) => {
+      clearTimeout(interruptTimer.current);
+      setUserSpeaking(false);
+      if (player.current.position()) {
+        interruptedByVoice.current = true;
+        interrupt();
+      }
+      send("speech.ended", {});
+      uploadUtterance(blob);
+    },
+    [interrupt, send, uploadUtterance]
+  );
+
+  const startMic = useCallback(async () => {
+    if (mic.current) return;
+    setMicState("starting");
+    try {
+      mic.current = await startMicrophone({
+        settings: stateRef.current.config?.vad_settings,
+        onSpeechStart: handleSpeechStart,
+        onSpeechEnd: handleSpeechEnd,
+        onMisfire: handleMisfire,
+      });
+      setMicState("on");
+    } catch {
+      setMicState("denied");
+    }
+  }, [handleSpeechStart, handleSpeechEnd, handleMisfire]);
+
   const start = useCallback(async () => {
     await unlockAudio();
     const { session } = await api.post("/api/sessions", { clientMode });
     storeSession(session);
     dispatch({ type: "SESSION_STARTED", session });
     connect(session);
-  }, [clientMode, connect, unlockAudio]);
+    startMic();
+  }, [clientMode, connect, unlockAudio, startMic]);
 
   const leave = useCallback(() => {
     clearStoredSession();
@@ -101,26 +216,15 @@ export default function useConversation({ clientMode }) {
         storeSession(full);
         dispatch({ type: "SESSION_STARTED", session: full });
         connect(full);
+        startMic();
       })
       .catch(() => clearStoredSession());
     return () => {
       cancelled = true;
     };
-  }, [connect]);
+  }, [connect, startMic]);
 
   useEffect(() => () => disconnect(), [disconnect]);
-
-  const interrupt = useCallback(() => {
-    clearTimeout(graceTimer.current);
-    const stopped = player.current.stop();
-    if (stopped) {
-      send("speech.started", stopped);
-    } else if (["speaking", "processing"].includes(stateRef.current.phase)) {
-      send("speech.started", {});
-    }
-    player.current.forget(stateRef.current.queue.map((t) => t.id));
-    dispatch({ type: "LOCAL_INTERRUPT" });
-  }, [send]);
 
   const speak = useCallback(
     async (text) => {
@@ -244,14 +348,19 @@ export default function useConversation({ clientMode }) {
   }, [state.session, state.connection, send]);
 
   useEffect(() => {
-    if (state.phase === "finalized") clearStoredSession();
-  }, [state.phase]);
+    if (state.phase !== "finalized") return;
+    clearStoredSession();
+    stopMicrophone();
+  }, [state.phase, stopMicrophone]);
 
   return {
     state,
     positionMs,
     audioBlocked,
+    micState,
+    userSpeaking,
     unlockAudio,
+    startMic,
     start,
     speak,
     interrupt,

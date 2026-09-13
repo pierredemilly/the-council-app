@@ -108,7 +108,14 @@ export const fr = {
       errored: "Un problème est survenu",
       reconnecting: "Reconnexion…",
       finalized: "Terminée",
+      user_speaking: "Vous parlez",
     },
     enable_sound: "Activer le son",
+    mic: {
+      starting: "Démarrage du micro…",
+      on: "Micro actif",
+      denied: "Micro indisponible : écrivez plutôt",
+      retry: "Autoriser le micro",
+    },
   },
 };

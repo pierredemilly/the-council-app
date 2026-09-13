@@ -49,3 +49,6 @@ node_modules
 
 # We use yarn, not bun
 /bun.lock
+
+# VAD runtime assets copied from node_modules by vite.config.mts
+/public/vad

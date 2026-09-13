@@ -107,7 +107,14 @@ export const en = {
       errored: "Something went wrong",
       reconnecting: "Reconnecting…",
       finalized: "Ended",
+      user_speaking: "You're speaking",
     },
     enable_sound: "Enable sound",
+    mic: {
+      starting: "Starting microphone…",
+      on: "Microphone on",
+      denied: "Microphone unavailable: type instead",
+      retry: "Allow microphone",
+    },
   },
 };

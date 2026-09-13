@@ -107,9 +107,19 @@ subscription per session plus a few JSON endpoints. Everything is described in
 - The browser plays clips through Web Audio (`lib/playback.js`) strictly in
   script order. `?simulateAudio=true` swaps in a timer-driven player for
   machines without an output device and for browser tests.
-- Select the `fake` LLM and TTS providers in the admin to exercise the whole
-  loop without keys: the fake TTS returns silent clips with synthetic word
-  timings. The public page has a typed-input mode that doubles
+- The microphone is always on once a conversation starts. Silero VAD runs in
+  the browser (`@ricky0123/vad-web`; model, worklet and wasm are copied to
+  `public/vad/` by `vite.config.mts`) with echo cancellation, using the admin's
+  VAD thresholds. Complete utterances are encoded as 16 kHz WAV and uploaded to
+  `POST /api/sessions/:id/utterances`, transcribed by OpenAI
+  (`Providers::Stt::Openai`, `gpt-4o-transcribe` by default) and committed as
+  the visitor's line; the first detected language is pinned on the session and
+  drives the prompt and later transcriptions. Speech during playback pauses the
+  loudspeaker immediately and becomes an interruption after
+  `interrupt_min_speech_ms`. See `docs/CALIBRATION.md` for tuning on site.
+- Select the `fake` LLM, TTS and STT providers in the admin to exercise the
+  whole loop without keys: the fake TTS returns silent clips with synthetic word
+  timings and the fake STT returns `stt_settings.fake_text`. The public page has a typed-input mode that doubles
   as the accessibility path.
 - `?kiosk=true` (or the discreet "Kiosk mode" button) enables museum behaviour:
   no footer links and an inactivity reset.
