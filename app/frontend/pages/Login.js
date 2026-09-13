@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
 import AuthLayout, { buttonClass, fieldClass } from "~/components/AuthLayout";
 import FormError from "~/components/FormError";
 import { useAuth } from "~/lib/auth";
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, signupEnabled } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -19,7 +20,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await signIn(email, password);
-      navigate("/");
+      navigate(location.state?.from || "/admin");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -60,9 +61,13 @@ export default function Login() {
         </button>
       </form>
       <div className="flex justify-between text-sm">
-        <Link className="text-indigo-600 hover:underline" to="/signup">
-          Create an account
-        </Link>
+        {signupEnabled ? (
+          <Link className="text-indigo-600 hover:underline" to="/signup">
+            Create an account
+          </Link>
+        ) : (
+          <span />
+        )}
         <Link className="text-indigo-600 hover:underline" to="/forgot-password">
           Forgot password?
         </Link>

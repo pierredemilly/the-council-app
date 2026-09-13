@@ -10,9 +10,74 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_06_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_121439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "agents", force: :cascade do |t|
+    t.integer "position", null: false
+    t.string "name", null: false
+    t.text "personality", default: "", null: false
+    t.string "voice_id"
+    t.string "voice_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((name)::text)", name: "index_agents_on_lower_name", unique: true
+    t.index ["position"], name: "index_agents_on_position", unique: true
+  end
+
+  create_table "app_configs", force: :cascade do |t|
+    t.text "global_system_prompt", default: "", null: false
+    t.string "llm_provider", default: "openai", null: false
+    t.string "llm_model", default: "gpt-5.6-luna", null: false
+    t.string "reasoning_level", default: "none", null: false
+    t.string "stt_provider", default: "openai", null: false
+    t.string "stt_model", default: "gpt-4o-transcribe", null: false
+    t.jsonb "stt_settings", default: {}, null: false
+    t.string "tts_provider", default: "eleven_labs", null: false
+    t.string "tts_model", default: "eleven_v3", null: false
+    t.jsonb "tts_settings", default: {}, null: false
+    t.integer "max_ai_turns", default: 6, null: false
+    t.integer "inactivity_reset_seconds", default: 300, null: false
+    t.integer "resume_window_seconds", default: 600, null: false
+    t.integer "yield_grace_ms", default: 2500, null: false
+    t.integer "retry_count", default: 3, null: false
+    t.integer "retry_base_ms", default: 500, null: false
+    t.integer "retry_max_ms", default: 4000, null: false
+    t.jsonb "vad_settings", default: {}, null: false
+    t.string "operating_mode", default: "cloud_pi", null: false
+    t.string "fallback_language", default: "en", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "solid_cable_messages", force: :cascade do |t|
     t.binary "channel", null: false
@@ -168,6 +233,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_06_120000) do
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

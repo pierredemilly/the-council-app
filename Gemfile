@@ -66,6 +66,9 @@ group :development, :test do
   # Behavior-driven testing [https://github.com/rspec/rspec-rails]
   gem "rspec-rails"
 
+  # Stub outbound provider HTTP calls in specs
+  gem "webmock"
+
   # A runtime developer console and IRB alternative [https://github.com/pry/pry]
   gem "pry-rails"
 end

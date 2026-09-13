@@ -13,6 +13,19 @@ Rails.application.routes.draw do
   # Returns the authenticated user (or { user: nil }) for the React frontend.
   get "current_user", to: "current_user#show"
 
+  namespace :api do
+    namespace :admin do
+      resource :config, only: %i[show update]
+      resources :agents, only: %i[index update] do
+        member do
+          put :avatar
+          delete :avatar, action: :destroy_avatar
+        end
+      end
+      resources :voices, only: :index
+    end
+  end
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
@@ -28,6 +41,6 @@ Rails.application.routes.draw do
   # routing (login, signup, password reset, …) can take over.
   get "*path", to: "app#index", constraints: ->(request) {
     request.format.html? &&
-      !request.path.start_with?("/rails", "/users")
+      !request.path.start_with?("/rails", "/users", "/api", "/cable")
   }
 end
