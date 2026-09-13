@@ -4,6 +4,7 @@ import { ClipboardDocumentIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { api } from "~/lib/api";
 import FormError from "~/components/FormError";
 import { t } from "~/i18n";
+import { displayText } from "~/lib/captions";
 
 const LATENCY_KEYS = ["stt_ms", "llm_ms", "first_clip_ms", "first_audio_ms"];
 
@@ -108,7 +109,7 @@ export default function SessionDetail() {
             >
               {event.kind === "human" ? t("conversation.you") : event.speaker}
             </span>
-            <span className="text-gray-800">{event.text}</span>
+            <span className="text-gray-800">{displayText(event.text)}</span>
             {event.interrupted && <span className="text-gray-400"> […]</span>}
             {event.kind === "human" && latencyLine(event.latency) && (
               <span className="ml-2 text-xs text-gray-400">
