@@ -115,6 +115,8 @@ Feedback round 1 (admin): VAD settings are sliders bounded by `AppConfig::VAD_RA
 
 Feedback round 2 (pacing): `continue` no longer triggers generation server-side; the segment ends `listening` with `nextAction: continue` and the browser waits `continue_grace_ms` (default 2 s) before `turn.request`, as it waits `yield_grace_ms` (default now 5 s) after a yield. `request_turn!` refuses once `max_unprompted_segments` (default 2) passages have been spoken since the visitor's last line and reports `wait_for_user` instead, so the group cannot talk to itself indefinitely. The prompt tells the model that one or two lines are often enough.
 
+Feedback round 3 (voice): the prompt rules end with a `## Sounding human` section listing the recognised tells of generated text (dashes, negative parallelism, rule of three, warm-ups and validation phrases, therapy speak, inflated vocabulary, hedging, closing morals), distilled from Wikipedia's *Signs of AI writing* guide and similar lists. As a safety net, `ScriptParser` rewrites em and en dashes into commas, ellipses or nothing before a turn is stored or voiced.
+
 ## 5. Frontend layout
 
 ```

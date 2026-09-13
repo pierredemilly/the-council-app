@@ -56,6 +56,11 @@ RSpec.describe Conversation::ScriptParser do
     expect(parse("ROSA: [Pause] Well.").turns.first.text).to eq("[Pause] Well.")
   end
 
+  it "turns dashes into spoken punctuation" do
+    segment = parse("ROSA: Well — no, I mean—she left. Really—? Then—\n\nCLAUDIA: Fine.—Or not. – Who knows")
+    expect(segment.turns.map(&:text)).to eq([ "Well, no, I mean, she left. Really? Then...", "Fine. Or not. Who knows" ])
+  end
+
   it "rejects unknown next actions" do
     expect { parse("ROSA: Hi.", next_action: "stop") }.to raise_error(described_class::Invalid, /next_action/)
   end

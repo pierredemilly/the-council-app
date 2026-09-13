@@ -30,6 +30,16 @@ RSpec.describe Conversation::PromptBuilder do
     expect(text).not_to include("Write every line in fr")
   end
 
+  it "tells the model which machine-writing habits to avoid" do
+    text = builder.instructions
+
+    expect(text).to include("## Sounding human")
+    expect(text).to include("no em dashes or en dashes")
+    expect(text).to include(%q("it's not X, it's Y"))
+    expect(text).to include("No therapy speak")
+    expect(text.index("## Sounding human")).to be < text.index("## APHRA")
+  end
+
   it "pins the language once the session knows it" do
     text = described_class.new(input.with(language: "fr")).instructions
     expect(text).to include("Write every line in fr.")

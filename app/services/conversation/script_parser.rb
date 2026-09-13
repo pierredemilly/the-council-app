@@ -61,7 +61,17 @@ module Conversation
         raise Invalid, "unsupported stage direction [#{direction}]" unless @stage_directions.include?(direction.strip.downcase)
       end
 
-      Providers::Llm::Turn.new(speaker: speaker, text: text)
+      Providers::Llm::Turn.new(speaker: speaker, text: spoken_punctuation(text))
+    end
+
+    # Dashes are the most recognisable machine tic and read as a stumble when voiced; a break becomes a comma, a cut-off line an ellipsis.
+    def spoken_punctuation(text)
+      text
+        .gsub(/\s*[—–]+\s*(?=[[:punct:]])/, "")
+        .gsub(/(?<=[[:punct:]])\s*[—–]+\s*/, " ")
+        .gsub(/\s*[—–]+\s*\z/, "...")
+        .gsub(/\s*[—–]+\s*/, ", ")
+        .strip
     end
   end
 end
