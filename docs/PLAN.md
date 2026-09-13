@@ -97,6 +97,8 @@ Client → server (channel `perform`): `session.resume`, `speech.started`, `spee
 
 Server → client: `session.ready {snapshot, events, pendingTurns}`, `state.changed {status}`, `transcript.committed {event}`, `agent.turn.ready {turn, clipUrl, durationMs, timings, nextAction}`, `agent.segment.cancel {generationId}`, `error.recoverable`, `error.fatal`, `server.heartbeat`.
 
+Implementation notes (slice 4): adapters return a raw `Providers::Llm::Envelope`; `Conversation::SegmentGenerator` owns the parse-and-feedback loop (network retries via `RetryPolicy`, script rejections fed back as a second user message, both bounded by `retry_count`). Stage-direction allowlists live on the TTS adapters (`Providers::Tts::Base::STAGE_DIRECTIONS`) so the parser only accepts cues the active voice provider can render. Token usage and LLM latency are accumulated in `conversation_sessions.metrics` and stamped on the triggering human event's `latency.llm_ms`.
+
 ## 5. Frontend layout
 
 ```
@@ -119,7 +121,7 @@ Dependencies to add: `@rails/actioncable`, `@ricky0123/vad-web` (+ `onnxruntime-
 1. **Bootstrap** (done) — rename app, drop template notes, `.env.example` placeholders (`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `APP_URL`, `ACTION_CABLE_ALLOWED_ORIGINS`, `SESSION_TOKEN_SECRET`, `LLM_TIMEOUT_MS`, `STT_TIMEOUT_MS`, `TTS_TIMEOUT_MS`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ALLOW_SIGNUP`), `openai` + `concurrent-ruby` gems, cable allowed origins from env, README skeleton.
 2. **Schema + admin** (done) — migrations for the configuration tables (`app_configs`, `agents`, Active Storage; session tables land with slice 3), models + validations, seeds (3 placeholder agents, default config, admin from env), `rails admin:create`, signup disabled in production unless `ALLOW_SIGNUP`, Alba serializers, `/api/admin/*` endpoints, React admin pages (settings form, agent form with avatar upload and voice select), ElevenLabs voice list endpoint with Solid Cache.
 3. **Session core + protocol with fakes** (done) — `ConversationSession` lifecycle, `SessionStore`, `Orchestrator`, `ConversationChannel`, `POST /api/sessions`, resume, heartbeats, `Providers::*::Fake`, public `Conversation` page in text mode (type a line instead of speaking) so the whole loop is exercisable without audio. Recurring `FinalizeStaleSessionsJob`.
-4. **LLM engine** — `PromptBuilder`, `ScriptParser` (all rejection rules), retry-with-validation-error, `OpenaiResponses` adapter with strict JSON schema output and configurable reasoning, token/latency recording, `SegmentRunner` skeleton (text only).
+4. **LLM engine** (done) — `PromptBuilder`, `ScriptParser` (all rejection rules), retry-with-validation-error, `OpenaiResponses` adapter with strict JSON schema output and configurable reasoning, token/latency recording, `SegmentRunner` skeleton (text only).
 5. **TTS + playback** — `ElevenLabs` adapter (`with-timestamps`, character → word timings), concurrent synthesis, `audio_clips` + clip endpoint, WebAudio ordered playback, first-clip-ready start, speaker highlight, purge job.
 6. **Mic + VAD + STT** — `getUserMedia` with echo cancellation, Silero VAD, WAV upload, OpenAI STT adapter, first-utterance-starts-discussion, mic indicator, adjustable thresholds surfaced from config.
 7. **Interruption** — `speech.started` during playback: hard stop, cancel queued clips, `Transcript.truncate_to(position_ms, timings)`, commit `interrupted: true`, discard pending turns, regenerate with interruption metadata; ellipsis rendering; empty-STT fallback (regenerate, don't replay).

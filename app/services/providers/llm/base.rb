@@ -5,7 +5,8 @@ module Providers
         @config = config
       end
 
-      def generate_segment(_input)
+      # feedback: validation error from a previous attempt, when retrying a rejected script.
+      def complete(_input, feedback: nil)
         raise NotImplementedError
       end
 

@@ -86,6 +86,15 @@ subscription per session plus a few JSON endpoints. Everything is described in
 - The browser owns playback timing: it reports `playback.started`,
   `playback.completed` and, on interruption, `speech.started` with the
   position reached. Only heard text is committed to the transcript.
+- Dialogue comes from one shared call to the OpenAI Responses API
+  (`Providers::Llm::OpenaiResponses`, official `openai` gem, strict JSON
+  schema output, `reasoning.effort` from the admin setting). The prompt is
+  assembled by `Conversation::PromptBuilder` (editorial prompt, structural
+  rules, personality sheets, script-style transcript with interruption
+  metadata); `Conversation::ScriptParser` rejects unknown speakers, visitor
+  lines, malformed lines, too many turns, more than two turns per character
+  and stage directions the TTS provider cannot voice. Rejected scripts are
+  sent back to the model with the error, up to the configured retry count.
 - Select the `fake` LLM provider in the admin to exercise the whole loop
   without an OpenAI key. The public page has a typed-input mode that doubles
   as the accessibility path.

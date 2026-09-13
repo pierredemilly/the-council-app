@@ -29,7 +29,7 @@ RSpec.describe Conversation::Orchestrator do
     end
 
     it "moves to errored with a recoverable error when the provider fails" do
-      allow_any_instance_of(Providers::Llm::Fake).to receive(:generate_segment).and_raise(Providers::Error.new("boom", recoverable: false))
+      allow_any_instance_of(Providers::Llm::Fake).to receive(:complete).and_raise(Providers::Error.new("boom", recoverable: false))
 
       orchestrator.start_from_utterance!(text: "Hello")
 

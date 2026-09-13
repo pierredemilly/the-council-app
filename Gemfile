@@ -53,6 +53,9 @@ gem "httparty"
 # In-process thread pool for the realtime generation path (see docs/PLAN.md §1.1)
 gem "concurrent-ruby"
 
+# Official OpenAI client (Responses API, structured outputs) for dialogue generation and transcription
+gem "openai"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
