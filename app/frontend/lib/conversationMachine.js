@@ -28,6 +28,7 @@ export const initialState = {
   seenEventIds: [],
   generationId: null,
   nextPosition: 0,
+  pendingInterrupt: false,
 };
 
 const SEEN_LIMIT = 200;
@@ -54,6 +55,11 @@ function applyServerMessage(state, message) {
     ...state,
     version: Math.max(state.version, message.version ?? 0),
     seenEventIds: remember(state, message.eventId),
+    pendingInterrupt:
+      state.pendingInterrupt &&
+      message.type !== "agent.segment.cancel" &&
+      message.type !== "state.changed" &&
+      !((message.version ?? 0) > state.version),
   };
   const { payload = {} } = message;
 
@@ -98,6 +104,9 @@ function applyServerMessage(state, message) {
       return { ...base, events: [...base.events, event], lastSeq: event.seq };
     }
     case "agent.turn.ready": {
+      // Announcements that crossed a local interruption on the wire belong to a cancelled segment.
+      if (base.pendingInterrupt && message.version <= state.version)
+        return base;
       if (
         base.queue.some((t) => t.id === payload.id) ||
         base.current?.id === payload.id
@@ -181,6 +190,7 @@ export function reducer(state, action) {
         nextAction: null,
         generationId: null,
         nextPosition: 0,
+        pendingInterrupt: true,
       };
     case "CLEAR_ERROR":
       return { ...state, error: null };

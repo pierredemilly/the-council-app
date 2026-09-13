@@ -181,4 +181,33 @@ describe("conversation machine", () => {
     expect(state.current).toBeNull();
     expect(playableTurn(state).id).toBe("a");
   });
+
+  it("holds back turn announcements that crossed a local interruption until the server cancels", () => {
+    let state = reducer(started, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("a", 0)),
+    });
+    state = reducer(state, { type: "PLAYBACK_STARTED", turnId: "a" });
+    state = reducer(state, { type: "LOCAL_INTERRUPT" });
+    expect(state.pendingInterrupt).toBe(true);
+
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("b", 1), { version: 1 }),
+    });
+    expect(state.queue).toEqual([]);
+
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.segment.cancel", {}, { version: 2 }),
+    });
+    expect(state.pendingInterrupt).toBe(false);
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("c", 0, null, "g2"), {
+        version: 2,
+      }),
+    });
+    expect(playableTurn(state).id).toBe("c");
+  });
 });

@@ -80,10 +80,11 @@ module Conversation
         locked.status = "listening"
         SessionStore.advance_version!(locked)
       end
+      session.reload
+      # Always acknowledged: the browser holds back late turn announcements until it hears this.
+      broadcast("agent.segment.cancel", {})
       return unless changed
 
-      session.reload
-      broadcast("agent.segment.cancel", {})
       broadcast("transcript.committed", event: serialize(committed)) if committed
       broadcast("state.changed", status: "listening", nextAction: nil)
     end
@@ -111,6 +112,7 @@ module Conversation
 
         event = SessionStore.append_event!(locked, kind: "agent", speaker: turn.speaker, text: turn.text, spoken_ms: spoken_ms || turn.duration_ms)
         turn.update!(status: "spoken")
+        turn.audio_clip&.delete
         if turn.last_in_segment?
           finished_segment = true
           locked.update!(status: "listening")

@@ -106,11 +106,15 @@ RSpec.describe Conversation::Orchestrator do
       expect(session.status).to eq("listening")
     end
 
-    it "is a no-op while already listening" do
+    it "only acknowledges with a cancel while already listening" do
       orchestrator.interrupt!
+      version = session.reload.version
       types_before = broadcast_types(session).size
+
       orchestrator.interrupt!
-      expect(broadcast_types(session).size).to eq(types_before)
+
+      expect(broadcast_types(session).last(broadcast_types(session).size - types_before)).to eq(%w[agent.segment.cancel])
+      expect(session.reload.version).to eq(version)
     end
 
     it "makes the next utterance carry the interruption into the prompt" do

@@ -103,6 +103,8 @@ Implementation notes (slice 5): turns are persisted `pending`, then `Conversatio
 
 Implementation notes (slice 6): the VAD runtime assets are copied into `public/vad/` when Vite starts or builds, so they ship with the Docker image without a separate step. Speech during playback pauses the Web Audio context at once; the interruption message is sent only after `interrupt_min_speech_ms` of continuous speech (or at speech end), and a VAD misfire resumes playback. Uploads are validated (type allowlist, 5 MB cap) in `Conversation::Transcriber`, which also pins `conversation_sessions.language` from the first detected language. `gpt-4o-transcribe` reports languages through the `languages` array of the JSON response; `whisper-*` models use `verbose_json`. An empty transcription answers `no_speech` and the client sends `turn.request` if it had interrupted the characters.
 
+Implementation notes (slice 7): every `speech.started` is acknowledged with `agent.segment.cancel` even when the server had nothing to cancel, and the client holds back `agent.turn.ready` messages carrying the pre-interruption version until that acknowledgement arrives, so a turn announced on the wire just before a local interruption can never be played. Clips are deleted as soon as their turn is spoken, not only on discard or finalize. `spec/services/conversation/interruption_races_spec.rb` covers interruptions during generation, during clip preparation, between clips, with stale turn ids, mid-turn with a follow-up utterance, and duplicate completion reports after a reconnect.
+
 ## 5. Frontend layout
 
 ```
@@ -128,7 +130,7 @@ Dependencies to add: `@rails/actioncable`, `@ricky0123/vad-web` (+ `onnxruntime-
 4. **LLM engine** (done) — `PromptBuilder`, `ScriptParser` (all rejection rules), retry-with-validation-error, `OpenaiResponses` adapter with strict JSON schema output and configurable reasoning, token/latency recording, `SegmentRunner` skeleton (text only).
 5. **TTS + playback** (done) — `ElevenLabs` adapter (`with-timestamps`, character → word timings), concurrent synthesis, `audio_clips` + clip endpoint, WebAudio ordered playback, first-clip-ready start, speaker highlight, purge job.
 6. **Mic + VAD + STT** (done) — `getUserMedia` with echo cancellation, Silero VAD, WAV upload, OpenAI STT adapter, first-utterance-starts-discussion, mic indicator, adjustable thresholds surfaced from config.
-7. **Interruption** — `speech.started` during playback: hard stop, cancel queued clips, `Transcript.truncate_to(position_ms, timings)`, commit `interrupted: true`, discard pending turns, regenerate with interruption metadata; ellipsis rendering; empty-STT fallback (regenerate, don't replay).
+7. **Interruption** (done) — `speech.started` during playback: hard stop, cancel queued clips, `Transcript.truncate_to(position_ms, timings)`, commit `interrupted: true`, discard pending turns, regenerate with interruption metadata; ellipsis rendering; empty-STT fallback (regenerate, don't replay).
 8. **Resilience + museum** — retry policy in every adapter, processing state during retries, final-failure UI with explicit retry, reconnect (auto 60 s then `Retry connection`), reconciliation by `seq`, kiosk mode (`?kiosk`) inactivity reset, metrics aggregation on finalize, `provider_errors`.
 9. **Polish + tests** — accessibility transcript mode, kiosk idle screen, Playwright browser tests with fake microphone, race tests, calibration doc (`docs/CALIBRATION.md`), deployment notes (`config/deploy.yml`, `Procfile.dev`, `recurring.yml`).
 
