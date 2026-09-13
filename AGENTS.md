@@ -29,7 +29,7 @@ Rails 8 + React 19 + Vite app where one visitor talks by voice with three AI cha
 
 - Copy `.env.example` to `.env` and fill in values.
 - `bin/dev` (or `yarn dev`) runs `Procfile.dev` via foreman: `rails server`, `yarn build --watch` (esbuild), `yarn build:css --watch` (Tailwind CLI), `bin/vite dev` (HMR), and `bin/jobs` (Solid Queue worker). All are required.
-- Tests: `bundle exec rspec`. Models are annotated with `bundle exec annotaterb models`.
+- Tests: `bundle exec rspec`, `yarn test` (Vitest) and `yarn e2e` (Playwright, see README). Models are annotated with `bundle exec annotaterb models`.
 
 ## Frontend Conventions
 
@@ -59,6 +59,13 @@ Rails 8 + React 19 + Vite app where one visitor talks by voice with three AI cha
 - Jobs in `app/jobs/` call a single method on a model or service; they run on Solid Queue, backed by the primary Postgres database.
 - Serialize JSON with Alba (see `app/serializers/`).
 - Use Solid Cache for caching and Solid Cable for Action Cable.
+
+## Conversation Conventions
+
+- Every session mutation goes through `Conversation::SessionStore.with_lock`; speculative work is pinned to `session.version` and dropped on `StaleVersion`.
+- Only heard text reaches `conversation_events`; speculative turns live in `session_turns`, audio in `audio_clips` for the session only.
+- Provider calls stay behind `Providers::{Llm,Stt,Tts}` adapters with a `Fake` twin; orchestration never sees HTTP.
+- Realtime messages are defined in `Conversation::Protocol`; the channel is transport only.
 
 ## General
 

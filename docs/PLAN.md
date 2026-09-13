@@ -107,6 +107,8 @@ Implementation notes (slice 7): every `speech.started` is acknowledged with `age
 
 Implementation notes (slice 8): `RetryPolicy#run(on_error:)` reports every failed attempt; `SegmentGenerator`, `ClipSynthesizer` and `Transcriber` record them in `provider_errors` (stages `llm`, `parse`, `tts`, `stt`). `playback.started` for a segment's first turn stamps `first_audio_ms` on the triggering human event; `finalize!` enqueues `AggregateSessionMetricsJob`, which writes counts, per-key latency percentiles and error tallies into `metrics`. The client pauses the loudspeaker while disconnected, shows "Retry connection" after 60 s (forcing `connection.reopen()`), and in kiosk mode returns to the idle screen a few seconds after finalization.
 
+Implementation notes (slice 9): Playwright lives in `e2e/` with `playwright.config.mjs` booting Rails in the test environment after `bin/rails e2e:seed` (fake providers, short inactivity and resume windows); tests use `?simulateAudio=true`, a fake media device and `page.clock` for the kiosk timer, and `context.setOffline` for network loss. `?textOnly=true` reuses the simulated player as the audio-free accessibility mode. Stage cues are removed from displayed captions together with their word timings (`lib/captions.js`).
+
 ## 5. Frontend layout
 
 ```
@@ -134,7 +136,7 @@ Dependencies to add: `@rails/actioncable`, `@ricky0123/vad-web` (+ `onnxruntime-
 6. **Mic + VAD + STT** (done) — `getUserMedia` with echo cancellation, Silero VAD, WAV upload, OpenAI STT adapter, first-utterance-starts-discussion, mic indicator, adjustable thresholds surfaced from config.
 7. **Interruption** (done) — `speech.started` during playback: hard stop, cancel queued clips, `Transcript.truncate_to(position_ms, timings)`, commit `interrupted: true`, discard pending turns, regenerate with interruption metadata; ellipsis rendering; empty-STT fallback (regenerate, don't replay).
 8. **Resilience + museum** (done) — retry policy in every adapter, processing state during retries, final-failure UI with explicit retry, reconnect (auto 60 s then `Retry connection`), reconciliation by `seq`, kiosk mode (`?kiosk`) inactivity reset, metrics aggregation on finalize, `provider_errors`.
-9. **Polish + tests** — accessibility transcript mode, kiosk idle screen, Playwright browser tests with fake microphone, race tests, calibration doc (`docs/CALIBRATION.md`), deployment notes (`config/deploy.yml`, `Procfile.dev`, `recurring.yml`).
+9. **Polish + tests** (done) — accessibility transcript mode, kiosk idle screen, Playwright browser tests with fake microphone, race tests, calibration doc (`docs/CALIBRATION.md`), deployment notes (`config/deploy.yml`, `Procfile.dev`, `recurring.yml`).
 
 ## 7. Testing strategy
 
