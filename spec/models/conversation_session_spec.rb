@@ -43,7 +43,7 @@ RSpec.describe ConversationSession, type: :model do
 
     expect(session.snapshot.max_ai_turns).to eq(6)
     expect(session.snapshot.agent_names).to eq(%w[Aphra Rosa Claudia])
-    expect(session.snapshot.public_payload[:agents].first.keys).to contain_exactly("position", "name", "avatar_url")
+    expect(session.snapshot.public_payload[:agents].first.keys).to contain_exactly("position", "name", "avatar_url", "color")
   end
 
   it "computes the resume deadline from the snapshot window" do

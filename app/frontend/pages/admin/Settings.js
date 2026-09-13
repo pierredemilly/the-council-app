@@ -8,6 +8,7 @@ import Field, {
 } from "~/components/Field";
 import JsonField from "~/components/JsonField";
 import SaveBar from "~/components/SaveBar";
+import SliderField from "~/components/SliderField";
 import FormError from "~/components/FormError";
 import { t } from "~/i18n";
 
@@ -21,6 +22,16 @@ function Section({ title, children }) {
 }
 
 const toOptions = (values) => values.map((v) => ({ value: v, label: v }));
+
+// Stored as JSON in vad_settings; the admin only ever sees sliders.
+const VAD_SLIDERS = [
+  { key: "positive_speech_threshold", step: 0.05, unit: "" },
+  { key: "negative_speech_threshold", step: 0.05, unit: "" },
+  { key: "min_speech_ms", step: 10, unit: " ms" },
+  { key: "redemption_ms", step: 50, unit: " ms" },
+  { key: "pre_speech_pad_ms", step: 10, unit: " ms" },
+  { key: "interrupt_min_speech_ms", step: 50, unit: " ms" },
+];
 
 export default function Settings() {
   const [saved, setSaved] = useState(null);
@@ -259,13 +270,27 @@ export default function Settings() {
       </Section>
 
       <Section title={t("admin.settings.vad")}>
-        <JsonField
-          label={t("admin.settings.vad_settings")}
-          hint={t("admin.settings.vad_settings_hint")}
-          value={form.vad_settings}
-          onChange={set("vad_settings")}
-          rows={9}
-        />
+        <p className="text-sm text-gray-500">
+          {t("admin.settings.vad_settings_hint")}
+        </p>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {VAD_SLIDERS.map(({ key, step, unit }) => (
+            <SliderField
+              key={key}
+              label={t(`admin.settings.vad_sliders.${key}`)}
+              hint={t(`admin.settings.vad_sliders.${key}_hint`)}
+              value={form.vad_settings?.[key]}
+              defaultValue={options.vad_defaults[key]}
+              min={options.vad_ranges[key].min}
+              max={options.vad_ranges[key].max}
+              step={step}
+              unit={unit}
+              onChange={(v) =>
+                set("vad_settings")({ ...form.vad_settings, [key]: v })
+              }
+            />
+          ))}
+        </div>
       </Section>
 
       <Section title={t("admin.settings.deployment")}>

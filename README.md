@@ -158,9 +158,16 @@ in production unless `ALLOW_SIGNUP=true`.
   turn limit, timings, retry policy, VAD thresholds and the operating-mode
   metadata. Changes apply to new conversations only.
 - **Characters** edits the three agents (name, personality sheet, avatar,
-  voice). Voices come from the configured TTS provider through
+  voice, colour). Voices come from the configured TTS provider through
   `GET /api/admin/voices`, cached for 10 minutes. Set the TTS provider to
-  `fake` to explore without an ElevenLabs key.
+  `fake` to explore without an ElevenLabs key. The colour is used for the
+  name in the transcript and the avatar glow.
+- **Sessions** lists the fifty most recent conversations; each one shows the
+  transcript (with per-turn latency), aggregated metrics and provider errors,
+  can be copied as plain script text, or deleted with everything attached.
+- Voice activity detection is edited with sliders bounded by
+  `AppConfig::VAD_RANGES`; the values are still stored as JSON in
+  `vad_settings`, and the API rejects values outside the ranges.
 
 ## Site password gate
 

@@ -6,7 +6,7 @@ module Conversation
       tts_provider tts_model tts_settings max_ai_turns inactivity_reset_seconds resume_window_seconds
       yield_grace_ms turn_gap_ms retry_count retry_base_ms retry_max_ms vad_settings operating_mode fallback_language
     ].freeze
-    AGENT_KEYS = %w[id position name personality voice_id voice_name].freeze
+    AGENT_KEYS = %w[id position name personality voice_id voice_name color].freeze
 
     def self.capture(config = AppConfig.current, agents = Agent.ordered.with_attached_avatar)
       {
@@ -47,7 +47,7 @@ module Conversation
     # What the browser is allowed to see: no personality sheets, no provider details.
     def public_payload
       {
-        agents: agents.map { |agent| agent.slice("position", "name", "avatar_url") },
+        agents: agents.map { |agent| agent.slice("position", "name", "avatar_url", "color") },
         vad_settings: vad_settings,
         yield_grace_ms: yield_grace_ms,
         turn_gap_ms: turn_gap_ms,

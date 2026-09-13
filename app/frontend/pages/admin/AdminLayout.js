@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Link } from "react-router-dom";
 import {
   ArrowRightOnRectangleIcon,
+  ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
@@ -32,6 +33,10 @@ export default function AdminLayout() {
             <NavLink to="/admin/characters" className={linkClass}>
               <UserGroupIcon className="h-5 w-5" />
               {t("admin.nav.characters")}
+            </NavLink>
+            <NavLink to="/admin/sessions" className={linkClass}>
+              <ChatBubbleLeftRightIcon className="h-5 w-5" />
+              {t("admin.nav.sessions")}
             </NavLink>
           </nav>
           <div className="flex items-center gap-3 text-sm text-gray-600">

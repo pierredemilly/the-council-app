@@ -70,5 +70,16 @@ RSpec.describe AppConfig, type: :model do
       config.stt_settings = { "blob" => "x" * 5.kilobytes }
       expect(config).not_to be_valid
     end
+
+    it "keeps VAD values inside the slider ranges" do
+      config.vad_settings = config.vad_settings.merge("positive_speech_threshold" => 1.5)
+      expect(config).not_to be_valid
+
+      config.vad_settings = config.vad_settings.merge("positive_speech_threshold" => 0.3, "negative_speech_threshold" => 0.6)
+      expect(config).not_to be_valid
+
+      config.vad_settings = config.vad_settings.merge("positive_speech_threshold" => 0.6, "negative_speech_threshold" => 0.3, "redemption_ms" => 900)
+      expect(config).to be_valid
+    end
   end
 end

@@ -65,6 +65,7 @@ export default function Conversation() {
   }, []);
 
   const agents = state.config?.agents ?? publicConfig?.agents ?? [];
+  const colors = Object.fromEntries(agents.map((a) => [a.name, a.color]));
   const reconnecting = isReconnecting(state);
   const phase = reconnecting
     ? "reconnecting"
@@ -170,6 +171,7 @@ export default function Conversation() {
               current={state.current}
               positionMs={positionMs}
               large={kiosk || textOnly}
+              colors={colors}
             />
             {state.phase !== "finalized" ? (
               <TextComposer

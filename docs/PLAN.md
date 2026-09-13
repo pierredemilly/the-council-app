@@ -111,6 +111,8 @@ Implementation notes (slice 9): Playwright lives in `e2e/` with `playwright.conf
 
 Feedback round 1 (conversation behaviour): `next_action` gains `continue` for passages that end on a line aimed at another character; the server starts the next generation when that line is spoken, and the parser coerces a closing question naming another character to `continue`. The prompt rules now frame a four-way conversation and forbid ending on a question to a character with `wait_for_user`. A new human utterance that supersedes queued or in-flight turns broadcasts `agent.segment.cancel`, and the browser treats speech while the group is thinking as an interruption after the debounce. The avatar highlight follows the locally playing turn only. `turn_gap_ms` (default 700) adds a breath between consecutive lines.
 
+Feedback round 1 (admin): VAD settings are sliders bounded by `AppConfig::VAD_RANGES` (validated server-side too, with negative ≤ positive), still stored as JSON. Agents carry a `color` (palette default by position) used for transcript names and avatar glow. `/admin/sessions` lists recent conversations and `/admin/sessions/:id` shows the transcript with latency, metrics and provider errors, copies it as script text, or deletes the session.
+
 ## 5. Frontend layout
 
 ```

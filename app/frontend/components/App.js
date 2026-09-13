@@ -9,6 +9,8 @@ import RequireAuth from "~/components/RequireAuth";
 import AdminLayout from "~/pages/admin/AdminLayout";
 import Settings from "~/pages/admin/Settings";
 import Agents from "~/pages/admin/Agents";
+import Sessions from "~/pages/admin/Sessions";
+import SessionDetail from "~/pages/admin/SessionDetail";
 
 export default function App() {
   return (
@@ -30,6 +32,8 @@ export default function App() {
           >
             <Route index element={<Settings />} />
             <Route path="characters" element={<Agents />} />
+            <Route path="sessions" element={<Sessions />} />
+            <Route path="sessions/:id" element={<SessionDetail />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -24,7 +24,9 @@ module Api
             stt_providers: AppConfig::STT_PROVIDERS,
             tts_providers: AppConfig::TTS_PROVIDERS,
             reasoning_levels: AppConfig::REASONING_LEVELS,
-            operating_modes: AppConfig::OPERATING_MODES
+            operating_modes: AppConfig::OPERATING_MODES,
+            vad_defaults: AppConfig::DEFAULT_VAD_SETTINGS,
+            vad_ranges: AppConfig::VAD_RANGES.transform_values { |r| { min: r.min, max: r.max } }
           }
         }
       end

@@ -2,6 +2,9 @@ import { useEffect, useRef } from "react";
 import { t } from "~/i18n";
 import { displayText, displayWords } from "~/lib/captions";
 
+const VISITOR_COLOR = "#7dd3fc";
+const FALLBACK_COLOR = "#fcd34d";
+
 // Words whose start time has passed are shown bright; the rest stay dim until spoken.
 function LiveCaption({ turn, positionMs }) {
   return (
@@ -26,8 +29,10 @@ export default function TranscriptPanel({
   current,
   positionMs = 0,
   large = false,
+  colors = {},
 }) {
   const bottom = useRef(null);
+  const colorOf = (name) => colors[name] ?? FALLBACK_COLOR;
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
@@ -47,7 +52,11 @@ export default function TranscriptPanel({
       {events.map((event) => (
         <p key={event.seq} className="text-stone-100">
           <span
-            className={`mr-2 font-semibold ${event.kind === "human" ? "text-sky-300" : "text-amber-300"}`}
+            className="mr-2 font-semibold"
+            style={{
+              color:
+                event.kind === "human" ? VISITOR_COLOR : colorOf(event.speaker),
+            }}
           >
             {event.kind === "human" ? t("conversation.you") : event.speaker}
           </span>
@@ -57,7 +66,10 @@ export default function TranscriptPanel({
       ))}
       {current && (
         <p className="italic">
-          <span className="mr-2 font-semibold text-amber-300">
+          <span
+            className="mr-2 font-semibold"
+            style={{ color: colorOf(current.speaker) }}
+          >
             {current.speaker}
           </span>
           <LiveCaption turn={current} positionMs={positionMs} />
