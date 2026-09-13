@@ -117,6 +117,16 @@ subscription per session plus a few JSON endpoints. Everything is described in
   drives the prompt and later transcriptions. Speech during playback pauses the
   loudspeaker immediately and becomes an interruption after
   `interrupt_min_speech_ms`. See `docs/CALIBRATION.md` for tuning on site.
+- Resilience: every provider call retries with the admin's bounded backoff,
+  each failed attempt is recorded in `provider_errors` (stage, provider,
+  attempt, sanitized message); a final failure puts the session in `errored`
+  with a **Try again** button and the transcript intact. A lost connection
+  pauses the loudspeaker, lets Action Cable reconnect for a minute, then offers
+  **Retry connection**; on reconnection the server's `session.ready` reconciles
+  events by `seq`. In kiosk mode a finished conversation returns to the idle
+  screen by itself. Finalized sessions get counts, latency percentiles
+  (STT, LLM, first clip, first audible word) and error tallies through
+  `AggregateSessionMetricsJob`.
 - Select the `fake` LLM, TTS and STT providers in the admin to exercise the
   whole loop without keys: the fake TTS returns silent clips with synthetic word
   timings and the fake STT returns `stt_settings.fake_text`. The public page has a typed-input mode that doubles

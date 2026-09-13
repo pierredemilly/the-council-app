@@ -27,4 +27,12 @@ RSpec.describe Conversation::RetryPolicy do
     expect { policy.run { raise Providers::Error.new("no key", recoverable: false) } }.to raise_error(Providers::Error)
     expect(sleeps).to be_empty
   end
+
+  it "reports every failed attempt to the observer, including the final one" do
+    seen = []
+    expect {
+      policy.run(on_error: ->(error, attempt) { seen << [ error.message, attempt ] }) { raise Providers::Error, "down" }
+    }.to raise_error(Providers::Error)
+    expect(seen).to eq([ [ "down", 1 ], [ "down", 2 ], [ "down", 3 ], [ "down", 4 ] ])
+  end
 end

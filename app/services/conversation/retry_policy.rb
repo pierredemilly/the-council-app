@@ -10,12 +10,14 @@ module Conversation
       @random = random
     end
 
-    def run
+    # on_error receives every failed attempt, including the last one, before the policy decides.
+    def run(on_error: nil)
       attempt = 0
       loop do
         attempt += 1
         return yield(attempt)
       rescue Providers::Error => e
+        on_error&.call(e, attempt)
         raise if !e.recoverable || attempt > count
 
         yield_delay(attempt)

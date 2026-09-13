@@ -16,7 +16,8 @@ module Conversation
     def call(upload)
       audio, mime, filename = read(upload)
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
-      result = @session.snapshot.retry_policy.run do
+      log = ->(error, attempt) { ProviderError.record!(session: @session, stage: "stt", provider: @session.snapshot.stt_provider, error: error, attempt: attempt) }
+      result = @session.snapshot.retry_policy.run(on_error: log) do
         @stt.transcribe(audio: audio, mime: mime, filename: filename, language: @session.language)
       end
       stt_ms = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond) - started

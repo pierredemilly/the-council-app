@@ -116,5 +116,8 @@ export const en = {
       denied: "Microphone unavailable: type instead",
       retry: "Allow microphone",
     },
+    reconnecting_hint: "Connection lost, trying to reconnect…",
+    connection_lost: "Still no connection.",
+    retry_connection: "Retry connection",
   },
 };

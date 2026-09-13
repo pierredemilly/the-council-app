@@ -105,6 +105,8 @@ Implementation notes (slice 6): the VAD runtime assets are copied into `public/v
 
 Implementation notes (slice 7): every `speech.started` is acknowledged with `agent.segment.cancel` even when the server had nothing to cancel, and the client holds back `agent.turn.ready` messages carrying the pre-interruption version until that acknowledgement arrives, so a turn announced on the wire just before a local interruption can never be played. Clips are deleted as soon as their turn is spoken, not only on discard or finalize. `spec/services/conversation/interruption_races_spec.rb` covers interruptions during generation, during clip preparation, between clips, with stale turn ids, mid-turn with a follow-up utterance, and duplicate completion reports after a reconnect.
 
+Implementation notes (slice 8): `RetryPolicy#run(on_error:)` reports every failed attempt; `SegmentGenerator`, `ClipSynthesizer` and `Transcriber` record them in `provider_errors` (stages `llm`, `parse`, `tts`, `stt`). `playback.started` for a segment's first turn stamps `first_audio_ms` on the triggering human event; `finalize!` enqueues `AggregateSessionMetricsJob`, which writes counts, per-key latency percentiles and error tallies into `metrics`. The client pauses the loudspeaker while disconnected, shows "Retry connection" after 60 s (forcing `connection.reopen()`), and in kiosk mode returns to the idle screen a few seconds after finalization.
+
 ## 5. Frontend layout
 
 ```
@@ -131,7 +133,7 @@ Dependencies to add: `@rails/actioncable`, `@ricky0123/vad-web` (+ `onnxruntime-
 5. **TTS + playback** (done) — `ElevenLabs` adapter (`with-timestamps`, character → word timings), concurrent synthesis, `audio_clips` + clip endpoint, WebAudio ordered playback, first-clip-ready start, speaker highlight, purge job.
 6. **Mic + VAD + STT** (done) — `getUserMedia` with echo cancellation, Silero VAD, WAV upload, OpenAI STT adapter, first-utterance-starts-discussion, mic indicator, adjustable thresholds surfaced from config.
 7. **Interruption** (done) — `speech.started` during playback: hard stop, cancel queued clips, `Transcript.truncate_to(position_ms, timings)`, commit `interrupted: true`, discard pending turns, regenerate with interruption metadata; ellipsis rendering; empty-STT fallback (regenerate, don't replay).
-8. **Resilience + museum** — retry policy in every adapter, processing state during retries, final-failure UI with explicit retry, reconnect (auto 60 s then `Retry connection`), reconciliation by `seq`, kiosk mode (`?kiosk`) inactivity reset, metrics aggregation on finalize, `provider_errors`.
+8. **Resilience + museum** (done) — retry policy in every adapter, processing state during retries, final-failure UI with explicit retry, reconnect (auto 60 s then `Retry connection`), reconciliation by `seq`, kiosk mode (`?kiosk`) inactivity reset, metrics aggregation on finalize, `provider_errors`.
 9. **Polish + tests** — accessibility transcript mode, kiosk idle screen, Playwright browser tests with fake microphone, race tests, calibration doc (`docs/CALIBRATION.md`), deployment notes (`config/deploy.yml`, `Procfile.dev`, `recurring.yml`).
 
 ## 7. Testing strategy
