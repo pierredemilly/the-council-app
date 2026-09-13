@@ -120,5 +120,7 @@ export const fr = {
     reconnecting_hint: "Connexion perdue, nouvelle tentative…",
     connection_lost: "Toujours pas de connexion.",
     retry_connection: "Réessayer la connexion",
+    text_only: "Texte seul",
+    sound_on: "Avec le son",
   },
 };

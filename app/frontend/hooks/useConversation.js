@@ -33,10 +33,11 @@ export default function useConversation({ clientMode }) {
   const idleTimer = useRef(null);
   const stateRef = useRef(state);
   stateRef.current = state;
-  // ?simulateAudio=true keeps the whole loop testable on machines without an audio output.
-  player.current ||= readFlag("simulateAudio")
-    ? new SimulatedPlayer()
-    : new AudioPlayer();
+  // ?simulateAudio=true keeps the whole loop testable without an audio output; ?textOnly=true is the audio-free accessibility mode.
+  player.current ||=
+    readFlag("simulateAudio") || readFlag("textOnly")
+      ? new SimulatedPlayer()
+      : new AudioPlayer();
 
   const send = useCallback(
     (type, payload) => channel.current?.send(type, payload),

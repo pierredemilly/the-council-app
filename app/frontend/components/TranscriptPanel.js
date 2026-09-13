@@ -1,14 +1,13 @@
 import { useEffect, useRef } from "react";
 import { t } from "~/i18n";
+import { displayText, displayWords } from "~/lib/captions";
 
 // Words whose start time has passed are shown bright; the rest stay dim until spoken.
 function LiveCaption({ turn, positionMs }) {
-  const words = turn.text.split(/\s+/);
-  const timings = turn.timings?.length === words.length ? turn.timings : null;
   return (
     <>
-      {words.map((word, index) => {
-        const spoken = timings ? timings[index].start_ms <= positionMs : true;
+      {displayWords(turn.text, turn.timings).map(({ word, timing }, index) => {
+        const spoken = timing ? timing.start_ms <= positionMs : true;
         return (
           <span
             key={index}
@@ -22,7 +21,12 @@ function LiveCaption({ turn, positionMs }) {
   );
 }
 
-export default function TranscriptPanel({ events, current, positionMs = 0 }) {
+export default function TranscriptPanel({
+  events,
+  current,
+  positionMs = 0,
+  large = false,
+}) {
   const bottom = useRef(null);
 
   useEffect(() => {
@@ -33,7 +37,7 @@ export default function TranscriptPanel({ events, current, positionMs = 0 }) {
     <section
       aria-live="polite"
       aria-label={t("conversation.transcript")}
-      className="max-h-[40vh] space-y-3 overflow-y-auto rounded-xl bg-black/30 p-4 text-left backdrop-blur"
+      className={`max-h-[40vh] space-y-3 overflow-y-auto rounded-xl bg-black/30 p-4 text-left backdrop-blur ${large ? "text-xl leading-relaxed" : ""}`}
     >
       {events.length === 0 && !current && (
         <p className="text-sm text-stone-400">
@@ -47,7 +51,7 @@ export default function TranscriptPanel({ events, current, positionMs = 0 }) {
           >
             {event.kind === "human" ? t("conversation.you") : event.speaker}
           </span>
-          {event.text}
+          {displayText(event.text)}
           {event.interrupted && <span className="text-stone-400">…</span>}
         </p>
       ))}

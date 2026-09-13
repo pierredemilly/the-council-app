@@ -119,5 +119,7 @@ export const en = {
     reconnecting_hint: "Connection lost, trying to reconnect…",
     connection_lost: "Still no connection.",
     retry_connection: "Retry connection",
+    text_only: "Text only",
+    sound_on: "Sound on",
   },
 };

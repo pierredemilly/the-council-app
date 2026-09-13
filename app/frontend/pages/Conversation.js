@@ -4,6 +4,7 @@ import {
   ArrowPathIcon,
   ComputerDesktopIcon,
   SignalSlashIcon,
+  SpeakerXMarkIcon,
   MicrophoneIcon,
   SpeakerWaveIcon,
   XMarkIcon,
@@ -25,8 +26,17 @@ function enterKiosk() {
   window.history.pushState({}, "", url);
 }
 
+// The player is chosen when the page loads, so switching modes reloads; the session resumes from storage.
+function toggleTextOnly(enabled) {
+  const url = new URL(window.location.href);
+  if (enabled) url.searchParams.delete("textOnly");
+  else url.searchParams.set("textOnly", "true");
+  window.location.assign(url);
+}
+
 export default function Conversation() {
   const kiosk = useQueryFlag("kiosk");
+  const textOnly = useQueryFlag("textOnly");
   const clientMode = kiosk ? "kiosk" : "browser";
   const {
     state,
@@ -162,6 +172,7 @@ export default function Conversation() {
               events={state.events}
               current={state.current}
               positionMs={positionMs}
+              large={kiosk || textOnly}
             />
             {state.phase !== "finalized" ? (
               <TextComposer
@@ -202,6 +213,16 @@ export default function Conversation() {
                 {t("conversation.leave")}
               </button>
             )}
+            <button
+              onClick={() => toggleTextOnly(textOnly)}
+              className="flex items-center gap-1 hover:text-stone-300"
+              aria-pressed={textOnly}
+            >
+              <SpeakerXMarkIcon className="h-4 w-4" />
+              {textOnly
+                ? t("conversation.sound_on")
+                : t("conversation.text_only")}
+            </button>
             <button
               onClick={enterKiosk}
               className="flex items-center gap-1 hover:text-stone-300"

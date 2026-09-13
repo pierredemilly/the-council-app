@@ -52,3 +52,7 @@ node_modules
 
 # VAD runtime assets copied from node_modules by vite.config.mts
 /public/vad
+
+# Playwright
+/test-results
+/playwright-report

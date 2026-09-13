@@ -127,6 +127,11 @@ subscription per session plus a few JSON endpoints. Everything is described in
   screen by itself. Finalized sessions get counts, latency percentiles
   (STT, LLM, first clip, first audible word) and error tallies through
   `AggregateSessionMetricsJob`.
+- Accessibility: the transcript doubles as live captions (words brighten as
+  they are spoken) and, with **Text only** in the footer (`?textOnly=true`), as
+  an audio-free mode where lines are shown at reading pace while the microphone
+  and typed input keep working. Stage cues such as `[laughs]` are never
+  displayed. Kiosk mode uses a larger transcript.
 - Select the `fake` LLM, TTS and STT providers in the admin to exercise the
   whole loop without keys: the fake TTS returns silent clips with synthetic word
   timings and the fake STT returns `stt_settings.fake_text`. The public page has a typed-input mode that doubles
@@ -195,8 +200,32 @@ that segment again.
 ## Testing
 
 ```bash
-bundle exec rspec
+bundle exec rspec          # Rails: models, services, requests, channel, jobs
+yarn test                  # Vitest: client state machine, captions, VAD mapping
+yarn e2e                   # Playwright: real browser against the fake providers
 ```
+
+`yarn e2e` boots the app in the test environment (`bin/rails e2e:seed` points
+the live configuration at the fake providers, then `bin/rails server -e test`)
+and drives Chromium with a fake microphone through start, ordered playback,
+interruption, resume, kiosk idle reset and network loss. Build the test
+assets first with `bin/vite build --mode=test`. Traces are kept on failure in
+`test-results/`.
+
+## Load and multi-worker notes
+
+The realtime path is bound by provider latency, not CPU: one Puma process with
+`RAILS_MAX_THREADS` threads plus the `GENERATION_THREADS` and `TTS_THREADS`
+pools handles a museum installation with a handful of concurrent sessions.
+Sessions are isolated rows, so more Puma workers or machines scale
+horizontally: Action Cable runs on Solid Cable (PostgreSQL), so browsers
+subscribed on one process receive broadcasts from another, and every
+generation checks the session `version` under a row lock before committing.
+To rehearse that locally, run two servers against the same database
+(`PORT=3000 bin/rails s` and `PORT=3001 bin/rails s`), open a conversation on
+one and reload it on the other: the transcript is reconciled from
+`session.ready`. Size `DB_POOL` above `RAILS_MAX_THREADS + GENERATION_THREADS +
+TTS_THREADS` when the pools are busy.
 
 ## Common commands
 
@@ -218,4 +247,4 @@ bundle exec annotaterb models  # refresh model schema annotations
 - **test** — RSpec against a Postgres service, after a Vite build (request
   specs render the layout, which needs the asset manifest)
 
-Browser tests (Playwright) are added in a later slice of the plan.
+- **e2e** — Playwright browser tests against the test server with fake providers

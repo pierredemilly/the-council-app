@@ -53,6 +53,9 @@ Rails.application.configure do
 
   config.active_job.queue_adapter = :test
 
+  # Browser tests open the socket from the test server's own origin.
+  config.action_cable.allowed_request_origins = [ %r{\Ahttp://(localhost|127\.0\.0\.1):\d+\z} ]
+
   # Run generation synchronously so specs observe its effects.
   config.after_initialize { Conversation::Executor.inline = true }
 end
