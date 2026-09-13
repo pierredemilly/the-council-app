@@ -27,7 +27,7 @@
 #  updated_at               :datetime         not null
 #
 class AppConfig < ApplicationRecord
-  LLM_PROVIDERS = %w[openai].freeze
+  LLM_PROVIDERS = %w[openai fake].freeze
   STT_PROVIDERS = %w[openai fake].freeze
   TTS_PROVIDERS = %w[eleven_labs fake].freeze
   REASONING_LEVELS = %w[none minimal low medium high].freeze

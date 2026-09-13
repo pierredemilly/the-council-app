@@ -47,6 +47,7 @@ Secrets are never stored in the database or editable from the admin.
 | `ELEVENLABS_API_KEY` | Text-to-speech and the voice list shown in the admin |
 | `LLM_MODEL` | Default dialogue model, seeded into the live configuration (`gpt-5.6-luna`) |
 | `LLM_TIMEOUT_MS` / `STT_TIMEOUT_MS` / `TTS_TIMEOUT_MS` | Per-request provider timeouts |
+| `GENERATION_THREADS` | Size of the in-process pool running dialogue generation (default 4) |
 | `APP_URL` | Public URL of the deployment, used for mail links and Action Cable origin checks |
 | `ACTION_CABLE_ALLOWED_ORIGINS` | Comma-separated extra origins allowed to open the WebSocket (production) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account created by `bin/rails db:seed` |
@@ -66,6 +67,30 @@ The admin UI is protected by Devise, set up as a JSON API consumed by React:
 - React screens are in `app/frontend/pages/` (`Login`, `Signup`, `ForgotPassword`, `ResetPassword`).
 - `GET /current_user` returns the signed-in user; `app/frontend/lib/auth.js` exposes `useAuth()`.
 - Visitors of the conversation itself are anonymous; they never sign in.
+
+## Conversation engine
+
+The public page (`/`) talks to Rails over one `ConversationChannel`
+subscription per session plus a few JSON endpoints. Everything is described in
+`docs/PLAN.md`; the short version:
+
+- `POST /api/sessions` creates a session and returns its `token` once. The
+  browser keeps `{id, token}` in `localStorage` and can resume for the
+  configured window (10 minutes by default); `FinalizeStaleSessionsJob` runs
+  every minute and finalizes abandoned sessions.
+- `POST /api/sessions/:id/utterances` commits what the visitor said (typed text
+  for now; audio arrives with the microphone slice) and starts a generation.
+- Generation runs in-process on a bounded thread pool (`GENERATION_THREADS`,
+  default 4), pinned to the session `version`. Interruptions, retries and
+  resets move the version, so late results are discarded instead of spoken.
+- The browser owns playback timing: it reports `playback.started`,
+  `playback.completed` and, on interruption, `speech.started` with the
+  position reached. Only heard text is committed to the transcript.
+- Select the `fake` LLM provider in the admin to exercise the whole loop
+  without an OpenAI key. The public page has a typed-input mode that doubles
+  as the accessibility path.
+- `?kiosk=true` (or the discreet "Kiosk mode" button) enables museum behaviour:
+  no footer links and an inactivity reset.
 
 ## Admin
 

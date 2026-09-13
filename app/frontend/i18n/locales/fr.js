@@ -82,4 +82,32 @@ export const fr = {
       remove_avatar: "Retirer l’avatar",
     },
   },
+  conversation: {
+    idle_hint:
+      "Trois personnages vous attendent. Lancez la conversation et parlez en premier : ils vous répondront.",
+    start: "Commencer la conversation",
+    speak_first:
+      "Dites quelque chose pour commencer. Les personnages répondent une fois que vous avez parlé.",
+    type_placeholder: "Écrivez ce que vous voulez dire…",
+    send: "Envoyer",
+    interrupt: "Interrompre",
+    retry: "Réessayer",
+    finished: "Cette conversation est terminée.",
+    new_conversation: "Nouvelle conversation",
+    transcript: "Transcription",
+    transcript_empty: "La transcription apparaîtra ici.",
+    you: "Vous",
+    admin: "Admin",
+    leave: "Quitter",
+    kiosk_mode: "Mode kiosque",
+    status: {
+      starting: "Connexion…",
+      listening: "À l’écoute",
+      processing: "Réflexion…",
+      speaking: "Parole",
+      errored: "Un problème est survenu",
+      reconnecting: "Reconnexion…",
+      finalized: "Terminée",
+    },
+  },
 };
