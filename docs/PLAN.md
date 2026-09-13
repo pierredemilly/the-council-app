@@ -1,0 +1,138 @@
+# The Council — V1 coding plan
+
+Status: **draft, awaiting validation**. Source: `cc4d8239-four-person-conversation-v1-spec.md`.
+Open questions are collected at the end; nothing below is implemented yet.
+
+## 0. Decisions already implied by the template
+
+- Stay on the template's JavaScript convention (JSX in `.js`), not TypeScript.
+- Solid Cable, Solid Queue and Solid Cache are already installed and migrated; production `cable.yml` already uses `solid_cable`. Nothing to add there.
+- Rename `RailsReactVite` → `TheCouncil`, `rails_react_vite` → `the_council`, "Rails React Vite" → "The Council" in the first commit, and delete the template setup notes from `README.md` / `AGENTS.md`.
+- New JSON endpoints live under `/api/...`; the SPA catch-all in `config/routes.rb` is extended to skip `/api` and `/cable`.
+- Public visitors are anonymous (no Devise). A conversation session is authorised by a random `client_token` issued at creation and stored in `localStorage` with the session id. Every `/api/sessions/:id/*` request and the Action Cable subscription must present it.
+
+## 1. Architecture at a glance
+
+```
+Browser (React)                              Rails (Puma, multi-thread)               Providers
+─────────────────────────────                ──────────────────────────────────────    ─────────
+mic ─► VAD (Silero, in-browser) ─► WAV ─► POST /api/sessions/:id/utterances ─► Stt ─► OpenAI STT
+                                             │ commit human event (seq++, version++)
+                                             │ spawn SegmentRunner thread (version v)
+                                             │    Llm.generate_segment ─────────────► OpenAI Responses
+                                             │    parse + validate envelope (retry w/ error)
+                                             │    Tts.synthesize ×N concurrently ─────► ElevenLabs
+                                             │    store clips (audio_clips, expires_at)
+                                             │    if version still == v: broadcast agent.turn.ready
+ConversationChannel ◄─── Action Cable (Solid Cable) ◄──┘
+speaker ◄─ WebAudio playback ◄─ GET /api/sessions/:id/clips/:clip_id
+   │ playback.progress / playback.completed / speech.started (interrupt) ──► channel ──► Orchestrator
+```
+
+Key invariants (from the spec, restated as code rules):
+
+1. Only Rails writes `conversation_events`; every write bumps `sessions.version` inside one transaction with optimistic locking.
+2. Every generation attempt carries the `version` it started from. Nothing is broadcast or committed if `sessions.version` moved on.
+3. The transcript only ever contains what was heard: AI text is committed on `playback.completed`, or as a truncated prefix on interruption. Speculative turns live in `session_turns` (status `pending`) until then.
+4. No audio at rest beyond the session: `audio_clips` rows are deleted on finalize and by a sweeper job; microphone audio is transcribed from memory and never written to disk.
+5. Nothing on the realtime path goes through Active Job. Solid Queue only runs finalization, metrics aggregation and cleanup.
+
+### 1.1 Why in-process threads for generation
+
+The spec forbids putting STT/LLM/TTS behind Active Job, yet an LLM+TTS round trip is 3–10 s and must not block the utterance upload response. Proposal: `Conversation::SegmentRunner` runs on a bounded `Concurrent::ThreadPoolExecutor` inside the Puma process (wrapped in `Rails.application.executor.wrap`, own DB connection from the pool). The version check makes a runner that outlives an interruption or lands on another worker harmless. If Puma restarts mid-generation the client's heartbeat/timeout asks the server to regenerate (`turn.request`), so no state is lost. `RAILS_MAX_THREADS`/`DB_POOL` are sized for this (documented in README).
+
+### 1.2 Who owns timers
+
+The browser owns playback timing, so it also owns the two soft timers: the `yield_to_user` grace period and the museum inactivity timeout. It reports them as channel actions (`turn.request`, `session.idle_reset`) and the server validates them against its own state (status, `last_activity_at`) before acting. The hard timer (10 min without a connected page → finalize) is server-side, via a recurring Solid Queue job reading `last_seen_at`.
+
+## 2. Data model
+
+| Table | Purpose / notable columns |
+| --- | --- |
+| `app_configs` | singleton. `global_system_prompt`, `llm_provider`, `llm_model`, `reasoning_level`, `stt_provider`, `stt_model`, `stt_settings jsonb`, `tts_provider`, `tts_model`, `tts_settings jsonb`, `max_ai_turns` (6), `inactivity_reset_seconds` (300), `resume_window_seconds` (600), `yield_grace_ms`, `retry_count` (3), `retry_base_ms`, `retry_max_ms`, `vad_settings jsonb` (thresholds, min speech ms, debounce), `operating_mode` (`cloud_pi` / `local_gpu`), `conversation_language` |
+| `agents` | exactly three rows, `position` 1..3, `name` (unique, no `:`), `personality` text (size-limited), `voice_id`, `voice_name`, `has_one_attached :avatar` |
+| `conversation_sessions` | `id uuid`, `client_token_digest`, `status` (`created`, `listening`, `processing`, `speaking`, `reconnecting`, `finalized`, `errored`), `client_mode` (`browser`/`kiosk`), `config_snapshot jsonb` (config + agents at start), `version int`, `next_seq int`, `started_at`, `first_utterance_at`, `last_seen_at`, `last_activity_at`, `finalized_at`, `finalize_reason`, `metrics jsonb` (filled on finalize) |
+| `conversation_events` | canonical transcript. `session_id`, `seq` (unique per session), `kind` (`human`, `agent`, `system`), `speaker` (agent name or null), `text`, `interrupted bool`, `spoken_ms`, `latency jsonb` (`stt_ms`, `llm_ms`, `first_clip_ms`, `first_audio_ms`), `occurred_at` |
+| `session_turns` | speculative generated turns. `session_id`, `generation_id`, `version`, `position`, `speaker`, `text`, `stage_directions jsonb`, `status` (`pending`, `ready`, `playing`, `spoken`, `discarded`), `next_action` on the last turn |
+| `audio_clips` | `id uuid`, `session_turn_id`, `mime`, `bytes bytea`, `duration_ms`, `timings jsonb` (word start/end ms), `expires_at`. Purged on finalize and hourly. |
+| `provider_errors` | `session_id`, `stage` (`stt`/`llm`/`tts`/`parse`), `provider`, `attempt`, `recoverable`, `message` (sanitised, no transcript), `created_at` |
+
+Named `conversation_sessions` rather than `sessions` to avoid clashing with Devise/Rails session vocabulary.
+
+## 3. Service boundaries (Ruby)
+
+```
+app/services/
+  conversation/
+    session_store.rb        # load w/ lock, commit_event!(session, expected_version, attrs), bump_version!
+    orchestrator.rb         # state machine: handle(action, payload) → transitions + side effects
+    transcript.rb           # canonicalisation, prefix truncation from word timings
+    segment_runner.rb       # LLM → parse → TTS fan-out → version check → broadcast
+    prompt_builder.rb       # system prompt + sheets + transcript + interruption metadata
+    script_parser.rb        # envelope → turns; all validation rules from spec §6
+    retry_policy.rb         # bounded exponential backoff + jitter, from config
+    broadcaster.rb          # the only place that calls ActionCable.server.broadcast
+    protocol.rb             # message constants, PROTOCOL_VERSION, payload validation
+  providers/
+    llm/base.rb, llm/openai_responses.rb, llm/fake.rb
+    stt/base.rb, stt/openai.rb,           stt/fake.rb
+    tts/base.rb, tts/eleven_labs.rb,      tts/fake.rb
+    registry.rb             # provider name → adapter, from config snapshot
+app/channels/conversation_channel.rb   # transport only, delegates to Orchestrator
+app/controllers/api/sessions_controller.rb, api/utterances_controller.rb, api/clips_controller.rb, api/config_controller.rb
+app/controllers/admin/agents_controller.rb, admin/settings_controller.rb, admin/voices_controller.rb
+app/jobs/finalize_stale_sessions_job.rb, purge_audio_clips_job.rb, aggregate_session_metrics_job.rb
+```
+
+Provider adapters return plain value objects (`LlmSegment`, `TranscriptResult`, `TtsResult{audio, mime, timings}`) and raise `Providers::Error{recoverable:}`; orchestration never sees HTTP.
+
+## 4. Realtime protocol (v1)
+
+Every message: `{ protocolVersion: 1, sessionId, eventId (uuid), ... }`. Server→client messages carry `seq` (last committed) and `version`; the client drops anything whose `version` is older than what it has seen.
+
+Client → server (channel `perform`): `session.resume`, `speech.started`, `speech.ended`, `playback.started`, `playback.progress {turnId, positionMs}`, `playback.stopped {turnId, positionMs}`, `playback.completed {turnId}`, `turn.request` (grace period elapsed), `session.idle_reset`, `client.heartbeat`.
+`session.start` and `utterance.uploaded` are HTTP (`POST /api/sessions`, `POST /api/sessions/:id/utterances`) so the audio never touches the socket.
+
+Server → client: `session.ready {snapshot, events, pendingTurns}`, `state.changed {status}`, `transcript.committed {event}`, `agent.turn.ready {turn, clipUrl, durationMs, timings, nextAction}`, `agent.segment.cancel {generationId}`, `error.recoverable`, `error.fatal`, `server.heartbeat`.
+
+## 5. Frontend layout
+
+```
+app/frontend/
+  pages/Conversation.js            # public UI (idle → listening → … ), avatars, transcript
+  pages/admin/Settings.js, pages/admin/Agents.js, pages/admin/AgentForm.js
+  components/RequireAuth.js, components/AvatarStage.js, components/TranscriptPanel.js, components/MicIndicator.js
+  lib/cable.js                     # @rails/actioncable consumer + typed send/receive, reconnect w/ 60 s auto retry
+  lib/session.js                   # localStorage {id, token}, resume rules
+  lib/vad.js                       # @ricky0123/vad-web wrapper, thresholds from config, WAV encoding
+  lib/playback.js                  # WebAudio queue: ordered clips, position reporting, hard stop
+  lib/conversationMachine.js       # pure client state machine (testable without DOM)
+  hooks/useConversation.js         # glues cable + vad + playback + machine
+```
+
+Dependencies to add: `@rails/actioncable`, `@ricky0123/vad-web` (+ `onnxruntime-web`, static wasm/onnx assets copied via Vite), `vitest` for pure-JS unit tests.
+
+## 6. Vertical slices (each ends green on `bundle exec rspec`, `bin/rubocop`, `bin/brakeman`, `yarn lint`, `yarn build:vite`)
+
+1. **Bootstrap** — rename app, drop template notes, `.env.example` placeholders (`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `APP_URL`, `ACTION_CABLE_ALLOWED_ORIGINS`, `SESSION_TOKEN_SECRET`, `LLM_TIMEOUT_MS`, `STT_TIMEOUT_MS`, `TTS_TIMEOUT_MS`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ALLOW_SIGNUP`), `openai` + `concurrent-ruby` gems, cable allowed origins from env, README skeleton.
+2. **Schema + admin** — migrations for §2, models + validations, seeds (3 placeholder agents, default config, admin from env), `rails admin:create`, signup disabled in production unless `ALLOW_SIGNUP`, Alba serializers, `/api/admin/*` endpoints, React admin pages (settings form, agent form with avatar upload and voice select), ElevenLabs voice list endpoint with Solid Cache.
+3. **Session core + protocol with fakes** — `ConversationSession` lifecycle, `SessionStore`, `Orchestrator`, `ConversationChannel`, `POST /api/sessions`, resume, heartbeats, `Providers::*::Fake`, public `Conversation` page in text mode (type a line instead of speaking) so the whole loop is exercisable without audio. Recurring `FinalizeStaleSessionsJob`.
+4. **LLM engine** — `PromptBuilder`, `ScriptParser` (all rejection rules), retry-with-validation-error, `OpenaiResponses` adapter with strict JSON schema output and configurable reasoning, token/latency recording, `SegmentRunner` skeleton (text only).
+5. **TTS + playback** — `ElevenLabs` adapter (`with-timestamps`, character → word timings), concurrent synthesis, `audio_clips` + clip endpoint, WebAudio ordered playback, first-clip-ready start, speaker highlight, purge job.
+6. **Mic + VAD + STT** — `getUserMedia` with echo cancellation, Silero VAD, WAV upload, OpenAI STT adapter, first-utterance-starts-discussion, mic indicator, adjustable thresholds surfaced from config.
+7. **Interruption** — `speech.started` during playback: hard stop, cancel queued clips, `Transcript.truncate_to(position_ms, timings)`, commit `interrupted: true`, discard pending turns, regenerate with interruption metadata; ellipsis rendering; empty-STT fallback (regenerate, don't replay).
+8. **Resilience + museum** — retry policy in every adapter, processing state during retries, final-failure UI with explicit retry, reconnect (auto 60 s then `Retry connection`), reconciliation by `seq`, kiosk mode (`?kiosk`) inactivity reset, metrics aggregation on finalize, `provider_errors`.
+9. **Polish + tests** — accessibility transcript mode, kiosk idle screen, Playwright browser tests with fake microphone, race tests, calibration doc (`docs/CALIBRATION.md`), deployment notes (`config/deploy.yml`, `Procfile.dev`, `recurring.yml`).
+
+## 7. Testing strategy
+
+- RSpec: model, service (parser, transcript truncation, retry policy, orchestrator transitions, stale-version rejection with two concurrent runners), request (API + admin auth), channel, job specs. Providers always faked; adapters get unit specs with recorded/stubbed HTTP (WebMock).
+- Vitest: `conversationMachine`, `playback` queue ordering, timing truncation helper, cable message de-duplication.
+- Playwright (Chromium is preinstalled here): permission prompt, start → speak (fake audio file) → hear ordered clips, interruption, reconnect, resume within/after 10 min (clock mocked), kiosk idle reset. Runs against Rails with `Providers::*::Fake` selected via `PROVIDERS=fake`.
+- Manual museum calibration checklist documented, not automated.
+
+## 8. Open questions
+
+Answers can go inline here, in chat, or on the Notion page once it is shared with the Claude connection (the connection currently only sees the Inrō workspace and gets a 404 on "The Council").
+
+See the chat message / Notion for the numbered list; they cover: app naming, hosting target, LLM model id and reasoning parameter, STT provider choice, ElevenLabs model (v3 vs flash), conversation language, kiosk-mode selection, admin/signup policy, in-process generation threads, VAD library, browser-test tooling, seed personas, and PR granularity.
