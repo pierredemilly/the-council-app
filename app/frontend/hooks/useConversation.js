@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api } from "~/lib/api";
 import { subscribeToConversation } from "~/lib/cable";
-import { initialState, reducer } from "~/lib/conversationMachine";
+import { initialState, playableTurn, reducer } from "~/lib/conversationMachine";
+import AudioPlayer, { SimulatedPlayer } from "~/lib/playback";
+import { readFlag } from "~/hooks/useQueryFlag";
 import {
   clearStoredSession,
   loadStoredSession,
@@ -9,32 +11,38 @@ import {
 } from "~/lib/session";
 
 const HEARTBEAT_MS = 30_000;
-const MIN_TURN_MS = 1_500;
-const MS_PER_CHAR = 55;
-
-// Until real audio arrives (slice 5), a turn "plays" for a duration proportional to its length.
-export const simulatedDurationMs = (text) =>
-  Math.max(MIN_TURN_MS, text.length * MS_PER_CHAR);
+const PROGRESS_MS = 1_000;
+const CAPTION_MS = 100;
 
 export default function useConversation({ clientMode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [positionMs, setPositionMs] = useState(0);
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const channel = useRef(null);
-  const playback = useRef(null);
+  const player = useRef(null);
   const graceTimer = useRef(null);
   const idleTimer = useRef(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  // ?simulateAudio=true keeps the whole loop testable on machines without an audio output.
+  player.current ||= readFlag("simulateAudio")
+    ? new SimulatedPlayer()
+    : new AudioPlayer();
 
   const send = useCallback(
     (type, payload) => channel.current?.send(type, payload),
     []
   );
 
+  const authHeaders = useCallback(() => {
+    const session = stateRef.current.session;
+    return session ? { "X-Session-Token": session.token } : {};
+  }, []);
+
   const disconnect = useCallback(() => {
     channel.current?.close();
     channel.current = null;
-    if (playback.current) clearTimeout(playback.current.timer);
-    playback.current = null;
+    player.current.stop();
     clearTimeout(graceTimer.current);
     clearTimeout(idleTimer.current);
   }, []);
@@ -57,12 +65,19 @@ export default function useConversation({ clientMode }) {
     [disconnect]
   );
 
+  const unlockAudio = useCallback(async () => {
+    const ok = await player.current.unlock().catch(() => false);
+    setAudioBlocked(!ok);
+    return ok;
+  }, []);
+
   const start = useCallback(async () => {
+    await unlockAudio();
     const { session } = await api.post("/api/sessions", { clientMode });
     storeSession(session);
     dispatch({ type: "SESSION_STARTED", session });
     connect(session);
-  }, [clientMode, connect]);
+  }, [clientMode, connect, unlockAudio]);
 
   const leave = useCallback(() => {
     clearStoredSession();
@@ -96,19 +111,14 @@ export default function useConversation({ clientMode }) {
   useEffect(() => () => disconnect(), [disconnect]);
 
   const interrupt = useCallback(() => {
-    const playing = playback.current;
     clearTimeout(graceTimer.current);
-    if (playing) {
-      clearTimeout(playing.timer);
-      playback.current = null;
-      send("speech.started", {
-        turnId: playing.turnId,
-        positionMs: Math.round(performance.now() - playing.startedAt),
-        durationMs: playing.durationMs,
-      });
+    const stopped = player.current.stop();
+    if (stopped) {
+      send("speech.started", stopped);
     } else if (["speaking", "processing"].includes(stateRef.current.phase)) {
       send("speech.started", {});
     }
+    player.current.forget(stateRef.current.queue.map((t) => t.id));
     dispatch({ type: "LOCAL_INTERRUPT" });
   }, [send]);
 
@@ -116,7 +126,7 @@ export default function useConversation({ clientMode }) {
     async (text) => {
       const session = stateRef.current.session;
       if (!session) return;
-      if (playback.current || stateRef.current.phase === "speaking")
+      if (player.current.position() || stateRef.current.phase === "speaking")
         interrupt();
       clearTimeout(graceTimer.current);
       await fetch(`/api/sessions/${session.id}/utterances`, {
@@ -143,25 +153,59 @@ export default function useConversation({ clientMode }) {
     send("turn.request", {});
   }, [send]);
 
-  // Sequential text-mode playback of the ready turns.
+  // Fetch and decode clips as soon as they are announced so the next one starts without a gap.
   useEffect(() => {
-    if (state.current || playback.current || state.queue.length === 0) return;
-    if (!["processing", "speaking"].includes(state.phase)) return;
-    const turn = state.queue[0];
-    const durationMs = simulatedDurationMs(turn.text);
+    state.queue.forEach((turn) => player.current.prefetch(turn, authHeaders()));
+  }, [state.queue, authHeaders]);
+
+  // Ordered playback: the next turn starts when its clip is decoded and the previous one has ended.
+  // Callbacks are not tied to this effect's lifetime: interrupting stops the source, which silences onEnded.
+  useEffect(() => {
+    const turn = playableTurn(state);
+    if (!turn || !["processing", "speaking"].includes(state.phase)) return;
+    if (audioBlocked || player.current.position()) return;
     dispatch({ type: "PLAYBACK_STARTED", turnId: turn.id });
-    send("playback.started", { turnId: turn.id });
-    playback.current = {
-      turnId: turn.id,
-      startedAt: performance.now(),
-      durationMs,
-      timer: setTimeout(() => {
-        playback.current = null;
+    player.current
+      .play(turn, authHeaders(), (durationMs) => {
         send("playback.completed", { turnId: turn.id, spokenMs: durationMs });
         dispatch({ type: "PLAYBACK_FINISHED", turnId: turn.id });
-      }, durationMs),
+        setPositionMs(0);
+      })
+      .then((durationMs) => {
+        setAudioBlocked(false);
+        send("playback.started", { turnId: turn.id, durationMs });
+      })
+      .catch((error) => {
+        if (error.message === "audio-blocked") {
+          setAudioBlocked(true);
+          dispatch({ type: "PLAYBACK_ABORTED", turnId: turn.id });
+        } else {
+          send("playback.completed", { turnId: turn.id, spokenMs: 0 });
+          dispatch({ type: "PLAYBACK_FINISHED", turnId: turn.id });
+        }
+      });
+  }, [state, audioBlocked, send, authHeaders]);
+
+  // Caption position for the live transcript, and coarse progress reports for the server.
+  useEffect(() => {
+    if (!state.current) return undefined;
+    const caption = setInterval(
+      () => setPositionMs(player.current.position()?.positionMs ?? 0),
+      CAPTION_MS
+    );
+    const progress = setInterval(() => {
+      const position = player.current.position();
+      if (position)
+        send("playback.progress", {
+          turnId: position.turnId,
+          positionMs: position.positionMs,
+        });
+    }, PROGRESS_MS);
+    return () => {
+      clearInterval(caption);
+      clearInterval(progress);
     };
-  }, [state.current, state.queue, state.phase, send]);
+  }, [state.current, send]);
 
   // Natural opening: give the visitor a moment, then let the characters carry on.
   useEffect(() => {
@@ -203,5 +247,15 @@ export default function useConversation({ clientMode }) {
     if (state.phase === "finalized") clearStoredSession();
   }, [state.phase]);
 
-  return { state, start, speak, interrupt, retry, leave };
+  return {
+    state,
+    positionMs,
+    audioBlocked,
+    unlockAudio,
+    start,
+    speak,
+    interrupt,
+    retry,
+    leave,
+  };
 }

@@ -12,6 +12,10 @@ module Providers
         raise NotImplementedError
       end
 
+      def synthesize(text:, voice_id:, language: nil)
+        raise NotImplementedError
+      end
+
       def stage_directions
         self.class::STAGE_DIRECTIONS
       end

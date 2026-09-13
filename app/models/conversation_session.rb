@@ -31,6 +31,7 @@ class ConversationSession < ApplicationRecord
 
   has_many :events, class_name: "ConversationEvent", dependent: :delete_all
   has_many :turns, class_name: "SessionTurn", dependent: :delete_all
+  has_many :audio_clips, dependent: :delete_all
 
   attr_reader :client_token
 

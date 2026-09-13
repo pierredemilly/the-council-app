@@ -4,6 +4,7 @@ import {
   ArrowPathIcon,
   ComputerDesktopIcon,
   MicrophoneIcon,
+  SpeakerWaveIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import AvatarStage from "~/components/AvatarStage";
@@ -25,9 +26,17 @@ function enterKiosk() {
 export default function Conversation() {
   const kiosk = useQueryFlag("kiosk");
   const clientMode = kiosk ? "kiosk" : "browser";
-  const { state, start, speak, interrupt, retry, leave } = useConversation({
-    clientMode,
-  });
+  const {
+    state,
+    positionMs,
+    audioBlocked,
+    unlockAudio,
+    start,
+    speak,
+    interrupt,
+    retry,
+    leave,
+  } = useConversation({ clientMode });
   const [publicConfig, setPublicConfig] = useState(null);
   const [startError, setStartError] = useState(null);
 
@@ -99,7 +108,20 @@ export default function Conversation() {
                 )}
               </div>
             )}
-            <TranscriptPanel events={state.events} current={state.current} />
+            {audioBlocked && (
+              <button
+                onClick={unlockAudio}
+                className="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-400"
+              >
+                <SpeakerWaveIcon className="h-5 w-5" />
+                {t("conversation.enable_sound")}
+              </button>
+            )}
+            <TranscriptPanel
+              events={state.events}
+              current={state.current}
+              positionMs={positionMs}
+            />
             {state.phase !== "finalized" ? (
               <TextComposer
                 onSpeak={speak}

@@ -108,5 +108,6 @@ export const en = {
       reconnecting: "Reconnecting…",
       finalized: "Ended",
     },
+    enable_sound: "Enable sound",
   },
 };

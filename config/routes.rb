@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     resource :public_config, only: :show, controller: "public_config"
     resources :sessions, only: %i[create show] do
       resources :utterances, only: :create
+      resources :clips, only: :show
     end
     namespace :admin do
       resource :config, only: %i[show update]

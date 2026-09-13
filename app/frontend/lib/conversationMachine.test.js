@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   initialState,
   isReconnecting,
+  playableTurn,
   reducer,
 } from "~/lib/conversationMachine";
 
@@ -20,9 +21,10 @@ const started = reducer(initialState, {
   session: { id: "s1", version: 1, lastSeq: 0, config: { agents: [] } },
 });
 
-const turn = (id, position, nextAction = null) => ({
+const turn = (id, position, nextAction = null, generationId = "g1") => ({
   id,
   position,
+  generationId,
   speaker: "Aphra",
   text: `turn ${position}`,
   nextAction,
@@ -131,5 +133,52 @@ describe("conversation machine", () => {
     );
     expect(isReconnecting({ ...started, connection: "connected" })).toBe(false);
     expect(isReconnecting({ ...started, phase: "finalized" })).toBe(false);
+  });
+
+  it("plays turns strictly in position order even when clips become ready out of order", () => {
+    let state = reducer(started, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("b", 1)),
+    });
+    expect(playableTurn(state)).toBeNull();
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("a", 0)),
+    });
+    expect(playableTurn(state).id).toBe("a");
+    state = reducer(state, { type: "PLAYBACK_STARTED", turnId: "a" });
+    expect(playableTurn(state)).toBeNull();
+    state = reducer(state, { type: "PLAYBACK_FINISHED", turnId: "a" });
+    expect(playableTurn(state).id).toBe("b");
+  });
+
+  it("drops the previous generation's queue when a new generation starts arriving", () => {
+    let state = reducer(started, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("old", 1, null, "g1")),
+    });
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("new", 0, null, "g2"), {
+        version: 2,
+      }),
+    });
+    expect(state.queue.map((t) => t.id)).toEqual(["new"]);
+    expect(playableTurn(state).id).toBe("new");
+  });
+
+  it("puts an aborted turn back at the head of the queue so it plays once audio is unlocked", () => {
+    let state = reducer(started, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("a", 0)),
+    });
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", turn("b", 1)),
+    });
+    state = reducer(state, { type: "PLAYBACK_STARTED", turnId: "a" });
+    state = reducer(state, { type: "PLAYBACK_ABORTED", turnId: "a" });
+    expect(state.current).toBeNull();
+    expect(playableTurn(state).id).toBe("a");
   });
 });
