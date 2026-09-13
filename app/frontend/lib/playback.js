@@ -84,6 +84,17 @@ export default class AudioPlayer {
     return active.durationMs;
   }
 
+  // Pausing suspends the whole context, so the reported position stops advancing too.
+  pause() {
+    if (this.active && this.context?.state === "running")
+      this.context.suspend();
+  }
+
+  resume() {
+    if (this.active && this.context?.state === "suspended")
+      this.context.resume();
+  }
+
   position() {
     if (!this.active) return null;
     return {
@@ -143,6 +154,7 @@ export class SimulatedPlayer {
       turnId: turn.id,
       startedAt: performance.now(),
       durationMs,
+      onEnded,
     };
     active.timer = setTimeout(() => {
       if (this.active === active) {
@@ -154,12 +166,36 @@ export class SimulatedPlayer {
     return durationMs;
   }
 
+  pause() {
+    if (!this.active || this.pausedAt) return;
+    clearTimeout(this.active.timer);
+    this.pausedAt = performance.now();
+  }
+
+  resume() {
+    if (!this.active || !this.pausedAt) return;
+    const active = this.active;
+    active.startedAt += performance.now() - this.pausedAt;
+    this.pausedAt = null;
+    const remaining = Math.max(
+      0,
+      active.durationMs - (performance.now() - active.startedAt)
+    );
+    active.timer = setTimeout(() => {
+      if (this.active === active) {
+        this.active = null;
+        active.onEnded(active.durationMs);
+      }
+    }, remaining);
+  }
+
   position() {
     if (!this.active) return null;
+    const now = this.pausedAt ?? performance.now();
     return {
       turnId: this.active.turnId,
       positionMs: Math.min(
-        Math.round(performance.now() - this.active.startedAt),
+        Math.round(now - this.active.startedAt),
         this.active.durationMs
       ),
       durationMs: this.active.durationMs,
@@ -172,6 +208,7 @@ export class SimulatedPlayer {
     const position = this.position();
     clearTimeout(active.timer);
     this.active = null;
+    this.pausedAt = null;
     return position;
   }
 }

@@ -2,6 +2,7 @@ module Providers
   module Registry
     TTS = { "eleven_labs" => Tts::ElevenLabs, "fake" => Tts::Fake }.freeze
     LLM = { "openai" => Llm::OpenaiResponses, "fake" => Llm::Fake }.freeze
+    STT = { "openai" => Stt::Openai, "fake" => Stt::Fake }.freeze
 
     def self.tts(config)
       TTS.fetch(config.tts_provider).new(config)
@@ -10,6 +11,12 @@ module Providers
     def self.llm(config)
       adapter = LLM[config.llm_provider] or
         raise Error.new("LLM provider #{config.llm_provider.inspect} is not available", recoverable: false)
+      adapter.new(config)
+    end
+
+    def self.stt(config)
+      adapter = STT[config.stt_provider] or
+        raise Error.new("STT provider #{config.stt_provider.inspect} is not available", recoverable: false)
       adapter.new(config)
     end
   end

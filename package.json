@@ -13,6 +13,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@rails/actioncable": "^8.0.0",
+    "@ricky0123/vad-web": "^0.0.24",
     "@tailwindcss/cli": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "react": "^19.1.1",
