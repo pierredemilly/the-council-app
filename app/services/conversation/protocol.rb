@@ -8,7 +8,7 @@ module Conversation
     CLIENT_TYPES = {
       "speech.started" => { turnId: :uuid, positionMs: :ms, durationMs: :ms },
       "speech.ended" => {},
-      "playback.started" => { turnId: :uuid! },
+      "playback.started" => { turnId: :uuid!, durationMs: :ms },
       "playback.progress" => { turnId: :uuid!, positionMs: :ms! },
       "playback.stopped" => { turnId: :uuid!, positionMs: :ms!, durationMs: :ms },
       "playback.completed" => { turnId: :uuid!, spokenMs: :ms },

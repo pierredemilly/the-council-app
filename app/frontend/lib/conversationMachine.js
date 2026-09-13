@@ -26,6 +26,8 @@ export const initialState = {
   version: 0,
   lastSeq: 0,
   seenEventIds: [],
+  generationId: null,
+  nextPosition: 0,
 };
 
 const SEEN_LIMIT = 200;
@@ -58,14 +60,17 @@ function applyServerMessage(state, message) {
   switch (message.type) {
     case "session.ready": {
       const events = payload.events ?? [];
+      const pending = sortTurns(payload.pendingTurns ?? []);
       return {
         ...base,
         phase: phaseForStatus(payload.status),
         config: payload.config ?? base.config,
         events,
         lastSeq: events.length ? events[events.length - 1].seq : 0,
-        queue: sortTurns(payload.pendingTurns ?? []),
+        queue: pending,
         current: null,
+        generationId: pending[0]?.generationId ?? null,
+        nextPosition: pending[0]?.position ?? 0,
         nextAction: payload.nextAction ?? null,
         error: null,
       };
@@ -98,10 +103,23 @@ function applyServerMessage(state, message) {
         base.current?.id === payload.id
       )
         return base;
-      return { ...base, queue: sortTurns([...base.queue, payload]) };
+      const newGeneration = payload.generationId !== base.generationId;
+      return {
+        ...base,
+        generationId: payload.generationId,
+        nextPosition: newGeneration ? 0 : base.nextPosition,
+        queue: sortTurns([...(newGeneration ? [] : base.queue), payload]),
+      };
     }
     case "agent.segment.cancel":
-      return { ...base, queue: [], current: null, speaker: null };
+      return {
+        ...base,
+        queue: [],
+        current: null,
+        speaker: null,
+        generationId: null,
+        nextPosition: 0,
+      };
     case "error.recoverable":
     case "error.fatal":
       return {
@@ -135,6 +153,7 @@ export function reducer(state, action) {
         ...state,
         current,
         speaker: current.speaker,
+        nextPosition: current.position + 1,
         queue: state.queue.filter((t) => t.id !== action.turnId),
       };
     }
@@ -142,6 +161,16 @@ export function reducer(state, action) {
       return state.current?.id === action.turnId
         ? { ...state, current: null }
         : state;
+    case "PLAYBACK_ABORTED": {
+      if (state.current?.id !== action.turnId) return state;
+      return {
+        ...state,
+        current: null,
+        speaker: null,
+        nextPosition: state.current.position,
+        queue: sortTurns([state.current, ...state.queue]),
+      };
+    }
     case "LOCAL_INTERRUPT":
       return {
         ...state,
@@ -150,6 +179,8 @@ export function reducer(state, action) {
         speaker: null,
         phase: "listening",
         nextAction: null,
+        generationId: null,
+        nextPosition: 0,
       };
     case "CLEAR_ERROR":
       return { ...state, error: null };
@@ -159,6 +190,13 @@ export function reducer(state, action) {
       return state;
   }
 }
+
+// The turn that may play now: the head of the queue, only when it is the next position of the generation.
+export const playableTurn = (state) => {
+  const head = state.queue[0];
+  if (!head || state.current) return null;
+  return head.position === state.nextPosition ? head : null;
+};
 
 export const isReconnecting = (state) =>
   state.session !== null &&

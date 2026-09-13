@@ -16,13 +16,15 @@ module Conversation
       session = ConversationSession.find(@session_id)
       return unless session.version == @version && session.status == "processing"
 
+      stamp_generation_start(session)
       result = SegmentGenerator.new(session).call
 
       turns = SessionStore.with_lock(@session_id, expected_version: @version) do |locked|
         record_generation(locked, result)
         persist_turns(locked, result.segment)
       end
-      turns.each { |turn| Broadcaster.broadcast(session, "agent.turn.ready", SessionTurnSerializer.new(turn).serializable_hash) }
+      timing = ClipSynthesizer.new(session, turns, @version).call
+      record_first_clip(session, timing[:first_clip_ms])
     rescue StaleVersion
       Rails.logger.info("[conversation] discarded stale generation for #{@session_id}@#{@version}")
     rescue Providers::Error => e
@@ -34,13 +36,18 @@ module Conversation
 
     private
 
+    def stamp_generation_start(session)
+      trigger = session.events.where(kind: "human").order(:seq).last
+      trigger&.update!(latency: trigger.latency.merge("generation_started_ms" => Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)))
+    end
+
     def persist_turns(session, segment)
       generation_id = SecureRandom.uuid
       session.turns.pending_playback.update_all(status: "discarded")
       segment.turns.each_with_index.map do |turn, index|
         session.turns.create!(
           generation_id: generation_id, version: @version, position: index,
-          speaker: turn.speaker, text: turn.text, status: "ready",
+          speaker: turn.speaker, text: turn.text, status: "pending",
           next_action: (index == segment.turns.size - 1 ? segment.next_action : nil)
         )
       end
@@ -60,8 +67,17 @@ module Conversation
       trigger&.update!(latency: trigger.latency.merge("llm_ms" => result.latency_ms))
     end
 
+    def record_first_clip(session, ready_at_ms)
+      trigger = session.events.where(kind: "human").order(:seq).last
+      return unless trigger && ready_at_ms
+
+      started = trigger.latency["generation_started_ms"]
+      trigger.update!(latency: trigger.latency.merge("first_clip_ms" => started ? ready_at_ms - started : nil).compact)
+    end
+
     def fail_generation(message, recoverable:)
       session = SessionStore.with_lock(@session_id, expected_version: @version) do |locked|
+        locked.turns.pending_playback.update_all(status: "discarded")
         locked.update!(status: "errored")
         locked
       end

@@ -1,7 +1,28 @@
 import { useEffect, useRef } from "react";
 import { t } from "~/i18n";
 
-export default function TranscriptPanel({ events, current }) {
+// Words whose start time has passed are shown bright; the rest stay dim until spoken.
+function LiveCaption({ turn, positionMs }) {
+  const words = turn.text.split(/\s+/);
+  const timings = turn.timings?.length === words.length ? turn.timings : null;
+  return (
+    <>
+      {words.map((word, index) => {
+        const spoken = timings ? timings[index].start_ms <= positionMs : true;
+        return (
+          <span
+            key={index}
+            className={spoken ? "text-stone-100" : "text-stone-500"}
+          >
+            {word}{" "}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+export default function TranscriptPanel({ events, current, positionMs = 0 }) {
   const bottom = useRef(null);
 
   useEffect(() => {
@@ -31,11 +52,11 @@ export default function TranscriptPanel({ events, current }) {
         </p>
       ))}
       {current && (
-        <p className="text-stone-300 italic">
+        <p className="italic">
           <span className="mr-2 font-semibold text-amber-300">
             {current.speaker}
           </span>
-          {current.text}
+          <LiveCaption turn={current} positionMs={positionMs} />
         </p>
       )}
       <div ref={bottom} />

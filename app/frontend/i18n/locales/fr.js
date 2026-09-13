@@ -109,5 +109,6 @@ export const fr = {
       reconnecting: "Reconnexion…",
       finalized: "Terminée",
     },
+    enable_sound: "Activer le son",
   },
 };

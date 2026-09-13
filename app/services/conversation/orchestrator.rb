@@ -13,7 +13,7 @@ module Conversation
       case type
       when "speech.started" then interrupt!(turn_id: payload[:turnId], position_ms: payload[:positionMs], duration_ms: payload[:durationMs])
       when "speech.ended", "playback.progress" then touch_activity!
-      when "playback.started" then playback_started!(payload[:turnId])
+      when "playback.started" then playback_started!(payload[:turnId], duration_ms: payload[:durationMs])
       when "playback.stopped" then interrupt!(turn_id: payload[:turnId], position_ms: payload[:positionMs], duration_ms: payload[:durationMs])
       when "playback.completed" then playback_completed!(payload[:turnId], spoken_ms: payload[:spokenMs])
       when "turn.request" then request_turn!
@@ -69,13 +69,14 @@ module Conversation
 
         turn = turn_id && locked.turns.for_version(locked.version).find_by(id: turn_id)
         if turn && !turn.spoken?
-          prefix = Transcript.spoken_prefix(text: turn.text, position_ms: position_ms.to_i, duration_ms: turn.duration_ms || duration_ms)
+          prefix = Transcript.spoken_prefix(text: turn.text, position_ms: position_ms.to_i, timings: turn.audio_clip&.timings,
+                                            duration_ms: turn.duration_ms || duration_ms)
           if prefix.present?
             committed = SessionStore.append_event!(locked, kind: "agent", speaker: turn.speaker, text: prefix,
                                                    interrupted: prefix != turn.text, spoken_ms: position_ms)
           end
         end
-        locked.turns.pending_playback.update_all(status: "discarded")
+        discard_pending!(locked)
         locked.status = "listening"
         SessionStore.advance_version!(locked)
       end
@@ -87,13 +88,13 @@ module Conversation
       broadcast("state.changed", status: "listening", nextAction: nil)
     end
 
-    def playback_started!(turn_id)
+    def playback_started!(turn_id, duration_ms: nil)
       ensure_active!
       SessionStore.with_lock(session.id) do |locked|
         turn = locked.turns.for_version(locked.version).find_by(id: turn_id)
         next unless turn&.status == "ready"
 
-        turn.update!(status: "playing")
+        turn.update!(status: "playing", duration_ms: turn.duration_ms || duration_ms)
         locked.update!(status: "speaking", last_activity_at: Time.current)
       end
       session.reload
@@ -148,6 +149,7 @@ module Conversation
         next if locked.finalized?
 
         locked.turns.pending_playback.update_all(status: "discarded")
+        locked.audio_clips.delete_all
         locked.update!(status: "finalized", finalized_at: Time.current, finalize_reason: reason, metrics: locked.metrics.merge(Metrics.summarize(locked)))
         SessionStore.advance_version!(locked)
       end
@@ -172,6 +174,12 @@ module Conversation
     end
 
     private
+
+    def discard_pending!(locked)
+      pending = locked.turns.pending_playback
+      AudioClip.where(session_turn_id: pending.select(:id)).delete_all
+      pending.update_all(status: "discarded")
+    end
 
     def ensure_active!
       raise Inactive, "session #{session.id} is finalized" if session.reload.finalized?

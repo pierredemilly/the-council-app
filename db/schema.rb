@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_140000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_140001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -77,6 +77,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_140000) do
     t.string "fallback_language", default: "en", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "audio_clips", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "conversation_session_id", null: false
+    t.uuid "session_turn_id", null: false
+    t.string "mime", null: false
+    t.binary "bytes", null: false
+    t.integer "duration_ms"
+    t.jsonb "timings"
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_session_id"], name: "index_audio_clips_on_conversation_session_id"
+    t.index ["expires_at"], name: "index_audio_clips_on_expires_at"
+    t.index ["session_turn_id"], name: "index_audio_clips_on_session_turn_id", unique: true
   end
 
   create_table "conversation_events", force: :cascade do |t|
@@ -288,6 +303,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_140000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "audio_clips", "conversation_sessions"
+  add_foreign_key "audio_clips", "session_turns"
   add_foreign_key "conversation_events", "conversation_sessions"
   add_foreign_key "session_turns", "conversation_sessions"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

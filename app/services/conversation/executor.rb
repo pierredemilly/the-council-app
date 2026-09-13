@@ -12,6 +12,15 @@ module Conversation
       )
     end
 
+    def self.tts_pool
+      @tts_pool ||= Concurrent::ThreadPoolExecutor.new(
+        min_threads: 1,
+        max_threads: Integer(ENV.fetch("TTS_THREADS", 6)),
+        max_queue: 64,
+        fallback_policy: :caller_runs
+      )
+    end
+
     def self.post(&block)
       return run(&block) if inline
 

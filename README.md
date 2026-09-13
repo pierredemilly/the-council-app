@@ -48,6 +48,7 @@ Secrets are never stored in the database or editable from the admin.
 | `LLM_MODEL` | Default dialogue model, seeded into the live configuration (`gpt-5.6-luna`) |
 | `LLM_TIMEOUT_MS` / `STT_TIMEOUT_MS` / `TTS_TIMEOUT_MS` | Per-request provider timeouts |
 | `GENERATION_THREADS` | Size of the in-process pool running dialogue generation (default 4) |
+| `TTS_THREADS` | Concurrent speech syntheses per Puma process (default 6) |
 | `APP_URL` | Public URL of the deployment, used for mail links and Action Cable origin checks |
 | `ACTION_CABLE_ALLOWED_ORIGINS` | Comma-separated extra origins allowed to open the WebSocket (production) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account created by `bin/rails db:seed` |
@@ -95,8 +96,20 @@ subscription per session plus a few JSON endpoints. Everything is described in
   lines, malformed lines, too many turns, more than two turns per character
   and stage directions the TTS provider cannot voice. Rejected scripts are
   sent back to the model with the error, up to the configured retry count.
-- Select the `fake` LLM provider in the admin to exercise the whole loop
-  without an OpenAI key. The public page has a typed-input mode that doubles
+- Each turn is voiced by ElevenLabs (`Providers::Tts::ElevenLabs`, the
+  `with-timestamps` endpoint, `eleven_v3` by default) as soon as the script is
+  validated; the turns of one segment are synthesized concurrently
+  (`TTS_THREADS`) and announced individually, so playback starts with the first
+  clip while the others finish. Clips live in `audio_clips` for the session only
+  (deleted on finalize, purged after an hour) and are served from
+  `/api/sessions/:id/clips/:clip_id`; character alignment becomes word timings
+  used for live captions and for keeping only the heard words on interruption.
+- The browser plays clips through Web Audio (`lib/playback.js`) strictly in
+  script order. `?simulateAudio=true` swaps in a timer-driven player for
+  machines without an output device and for browser tests.
+- Select the `fake` LLM and TTS providers in the admin to exercise the whole
+  loop without keys: the fake TTS returns silent clips with synthetic word
+  timings. The public page has a typed-input mode that doubles
   as the accessibility path.
 - `?kiosk=true` (or the discreet "Kiosk mode" button) enables museum behaviour:
   no footer links and an inactivity reset.

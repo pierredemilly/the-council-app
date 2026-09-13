@@ -31,4 +31,12 @@ class SessionTurnSerializer
   transform_keys :lower_camel
 
   attributes :id, :generation_id, :version, :position, :speaker, :text, :next_action, :status, :duration_ms
+
+  attribute :clip_url do |turn|
+    "/api/sessions/#{turn.conversation_session_id}/clips/#{turn.audio_clip.id}" if turn.audio_clip
+  end
+
+  attribute :timings do |turn|
+    turn.audio_clip&.timings
+  end
 end

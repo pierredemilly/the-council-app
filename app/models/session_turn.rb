@@ -30,6 +30,7 @@ class SessionTurn < ApplicationRecord
   NEXT_ACTIONS = %w[wait_for_user yield_to_user].freeze
 
   belongs_to :conversation_session
+  has_one :audio_clip, dependent: :delete
 
   validates :status, inclusion: { in: STATUSES }
   validates :next_action, inclusion: { in: NEXT_ACTIONS }, allow_nil: true
