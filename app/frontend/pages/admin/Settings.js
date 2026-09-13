@@ -204,6 +204,18 @@ export default function Settings() {
             />
           </Field>
           <Field
+            label={t("admin.settings.turn_gap_ms")}
+            hint={t("admin.settings.turn_gap_ms_hint")}
+          >
+            <NumberInput
+              value={form.turn_gap_ms}
+              onChange={set("turn_gap_ms")}
+              min={0}
+              max={5000}
+              step={50}
+            />
+          </Field>
+          <Field
             label={t("admin.settings.yield_grace_ms")}
             hint={t("admin.settings.yield_grace_ms_hint")}
           >

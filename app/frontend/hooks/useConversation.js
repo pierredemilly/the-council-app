@@ -14,6 +14,7 @@ import {
 const HEARTBEAT_MS = 30_000;
 const AUTO_RECONNECT_MS = 60_000;
 const KIOSK_RESET_DELAY_MS = 4_000;
+const DEFAULT_TURN_GAP_MS = 700;
 const PROGRESS_MS = 1_000;
 const CAPTION_MS = 100;
 
@@ -27,6 +28,9 @@ export default function useConversation({ clientMode }) {
   const mic = useRef(null);
   const interruptTimer = useRef(null);
   const interruptedByVoice = useRef(false);
+  const lastTurnEndedAt = useRef(0);
+  const gapTimer = useRef(null);
+  const [gapTick, setGapTick] = useState(0);
   const channel = useRef(null);
   const player = useRef(null);
   const graceTimer = useRef(null);
@@ -64,6 +68,7 @@ export default function useConversation({ clientMode }) {
     stopMicrophone();
     clearTimeout(graceTimer.current);
     clearTimeout(idleTimer.current);
+    clearTimeout(gapTimer.current);
   }, [stopMicrophone]);
 
   const connect = useCallback(
@@ -142,10 +147,14 @@ export default function useConversation({ clientMode }) {
     setUserSpeaking(true);
     clearTimeout(graceTimer.current);
     interruptedByVoice.current = false;
-    if (player.current.position()) {
+    const thinking = ["processing", "speaking"].includes(
+      stateRef.current.phase
+    );
+    if (player.current.position() || thinking) {
       player.current.pause();
       const debounce =
         stateRef.current.config?.vad_settings?.interrupt_min_speech_ms ?? 300;
+      // Speech while the group is answering (or still thinking) supersedes that answer after the debounce.
       interruptTimer.current = setTimeout(() => {
         interruptedByVoice.current = true;
         interrupt();
@@ -163,7 +172,11 @@ export default function useConversation({ clientMode }) {
     (blob) => {
       clearTimeout(interruptTimer.current);
       setUserSpeaking(false);
-      if (player.current.position()) {
+      if (
+        player.current.position() ||
+        stateRef.current.queue.length ||
+        ["processing", "speaking"].includes(stateRef.current.phase)
+      ) {
         interruptedByVoice.current = true;
         interrupt();
       }
@@ -234,8 +247,13 @@ export default function useConversation({ clientMode }) {
     async (text) => {
       const session = stateRef.current.session;
       if (!session) return;
-      if (player.current.position() || stateRef.current.phase === "speaking")
+      if (
+        player.current.position() ||
+        stateRef.current.queue.length ||
+        ["processing", "speaking"].includes(stateRef.current.phase)
+      ) {
         interrupt();
+      }
       clearTimeout(graceTimer.current);
       await fetch(`/api/sessions/${session.id}/utterances`, {
         method: "POST",
@@ -277,9 +295,19 @@ export default function useConversation({ clientMode }) {
     const turn = playableTurn(state);
     if (!turn || !["processing", "speaking"].includes(state.phase)) return;
     if (audioBlocked || player.current.position()) return;
+    // A short breath between two characters; the first line of a segment starts at once.
+    const gap = state.config?.turn_gap_ms ?? DEFAULT_TURN_GAP_MS;
+    const wait =
+      turn.position > 0 ? lastTurnEndedAt.current + gap - performance.now() : 0;
+    if (wait > 0) {
+      clearTimeout(gapTimer.current);
+      gapTimer.current = setTimeout(() => setGapTick((n) => n + 1), wait);
+      return;
+    }
     dispatch({ type: "PLAYBACK_STARTED", turnId: turn.id });
     player.current
       .play(turn, authHeaders(), (durationMs) => {
+        lastTurnEndedAt.current = performance.now();
         send("playback.completed", { turnId: turn.id, spokenMs: durationMs });
         dispatch({ type: "PLAYBACK_FINISHED", turnId: turn.id });
         setPositionMs(0);
@@ -297,7 +325,7 @@ export default function useConversation({ clientMode }) {
           dispatch({ type: "PLAYBACK_FINISHED", turnId: turn.id });
         }
       });
-  }, [state, audioBlocked, send, authHeaders]);
+  }, [state, audioBlocked, gapTick, send, authHeaders]);
 
   // Caption position for the live transcript, and coarse progress reports for the server.
   useEffect(() => {

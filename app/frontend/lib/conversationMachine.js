@@ -87,7 +87,8 @@ function applyServerMessage(state, message) {
         ...base,
         phase,
         speaker:
-          phase === "speaking" ? (payload.speaker ?? base.speaker) : null,
+          base.current?.speaker ??
+          (phase === "speaking" ? (payload.speaker ?? null) : null),
         nextAction:
           payload.nextAction ??
           (phase === "listening" ? base.nextAction : null),

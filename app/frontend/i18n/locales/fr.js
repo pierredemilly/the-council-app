@@ -66,6 +66,9 @@ export const fr = {
         cloud_pi: "Cloud uniquement (client Raspberry Pi)",
         local_gpu: "Serveur local possible (ordinateur GPU)",
       },
+      turn_gap_ms: "Pause entre les personnages (ms)",
+      turn_gap_ms_hint:
+        "Silence laissé entre deux répliques consécutives d’un segment.",
     },
     characters: {
       title: "Personnages",

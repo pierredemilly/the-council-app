@@ -23,6 +23,7 @@ require "rails_helper"
 #  tts_model                :string           default("eleven_v3"), not null
 #  tts_provider             :string           default("eleven_labs"), not null
 #  tts_settings             :jsonb            not null
+#  turn_gap_ms              :integer          default(700), not null
 #  vad_settings             :jsonb            not null
 #  yield_grace_ms           :integer          default(2500), not null
 #  created_at               :datetime         not null

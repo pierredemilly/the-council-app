@@ -21,6 +21,7 @@
 #  tts_model                :string           default("eleven_v3"), not null
 #  tts_provider             :string           default("eleven_labs"), not null
 #  tts_settings             :jsonb            not null
+#  turn_gap_ms              :integer          default(700), not null
 #  vad_settings             :jsonb            not null
 #  yield_grace_ms           :integer          default(2500), not null
 #  created_at               :datetime         not null
@@ -31,7 +32,7 @@ class AppConfigSerializer
 
   attributes :id, :global_system_prompt, :llm_provider, :llm_model, :reasoning_level,
              :stt_provider, :stt_model, :stt_settings, :tts_provider, :tts_model, :tts_settings,
-             :max_ai_turns, :inactivity_reset_seconds, :resume_window_seconds, :yield_grace_ms,
+             :max_ai_turns, :inactivity_reset_seconds, :resume_window_seconds, :yield_grace_ms, :turn_gap_ms,
              :retry_count, :retry_base_ms, :retry_max_ms, :vad_settings, :operating_mode,
              :fallback_language, :updated_at
 end

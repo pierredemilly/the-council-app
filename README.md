@@ -84,6 +84,12 @@ subscription per session plus a few JSON endpoints. Everything is described in
 - Generation runs in-process on a bounded thread pool (`GENERATION_THREADS`,
   default 4), pinned to the session `version`. Interruptions, retries and
   resets move the version, so late results are discarded instead of spoken.
+- `next_action` has three values: `wait_for_user` (a question to the visitor),
+  `yield_to_user` (a natural pause, the group resumes after the grace period)
+  and `continue` (the last line is aimed at another character, so the next
+  segment is generated as soon as it is spoken). The parser also turns a
+  closing question that names another character into `continue`. A configurable
+  pause (`turn_gap_ms`) separates two consecutive lines.
 - The browser owns playback timing: it reports `playback.started`,
   `playback.completed` and, on interruption, `speech.started` with the
   position reached. Only heard text is committed to the transcript.

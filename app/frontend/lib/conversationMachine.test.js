@@ -210,4 +210,32 @@ describe("conversation machine", () => {
     });
     expect(playableTurn(state).id).toBe("c");
   });
+
+  it("highlights the turn playing locally, not a late speaker report from the server", () => {
+    let state = reducer(started, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", {
+        ...turn("a", 0),
+        speaker: "Aphra",
+      }),
+    });
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("agent.turn.ready", {
+        ...turn("b", 1),
+        speaker: "Rosa",
+      }),
+    });
+    state = reducer(state, { type: "PLAYBACK_STARTED", turnId: "a" });
+    state = reducer(state, { type: "PLAYBACK_FINISHED", turnId: "a" });
+    state = reducer(state, { type: "PLAYBACK_STARTED", turnId: "b" });
+    state = reducer(state, {
+      type: "SERVER_MESSAGE",
+      message: message("state.changed", {
+        status: "speaking",
+        speaker: "Aphra",
+      }),
+    });
+    expect(state.speaker).toBe("Rosa");
+  });
 });

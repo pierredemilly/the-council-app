@@ -65,6 +65,9 @@ export const en = {
         cloud_pi: "Cloud only (Raspberry Pi client)",
         local_gpu: "Local-server capable (GPU computer)",
       },
+      turn_gap_ms: "Pause between characters (ms)",
+      turn_gap_ms_hint:
+        "Silence left between two consecutive lines of a segment.",
     },
     characters: {
       title: "Characters",

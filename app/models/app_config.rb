@@ -21,6 +21,7 @@
 #  tts_model                :string           default("eleven_v3"), not null
 #  tts_provider             :string           default("eleven_labs"), not null
 #  tts_settings             :jsonb            not null
+#  turn_gap_ms              :integer          default(700), not null
 #  vad_settings             :jsonb            not null
 #  yield_grace_ms           :integer          default(2500), not null
 #  created_at               :datetime         not null
@@ -57,6 +58,7 @@ class AppConfig < ApplicationRecord
   validates :inactivity_reset_seconds, :resume_window_seconds,
             numericality: { only_integer: true, in: 30..3600 }
   validates :yield_grace_ms, numericality: { only_integer: true, in: 0..30_000 }
+  validates :turn_gap_ms, numericality: { only_integer: true, in: 0..5_000 }
   validates :retry_count, numericality: { only_integer: true, in: 0..10 }
   validates :retry_base_ms, numericality: { only_integer: true, in: 50..10_000 }
   validates :retry_max_ms, numericality: { only_integer: true, in: 100..60_000 }

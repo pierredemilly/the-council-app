@@ -42,14 +42,18 @@ module Conversation
       raise ArgumentError, "text is too long" if text.length > TEXT_CHAR_LIMIT
       ensure_active!
 
+      dropped = false
       event = SessionStore.with_lock(session.id) do |locked|
-        locked.turns.pending_playback.update_all(status: "discarded")
+        dropped = locked.turns.pending_playback.exists? || locked.status == "processing"
+        discard_pending!(locked)
         locked.first_utterance_at ||= Time.current
         locked.status = "processing"
         SessionStore.advance_version!(locked)
         SessionStore.append_event!(locked, kind: "human", text: text, latency: latency)
       end
       session.reload
+      # A new line while an answer was queued or in flight supersedes it; the browser must drop it too.
+      broadcast("agent.segment.cancel", {}) if dropped
       broadcast("transcript.committed", event: serialize(event))
       broadcast("state.changed", status: "processing")
       SegmentRunner.enqueue(session.id, session.version)
@@ -107,6 +111,7 @@ module Conversation
       ensure_active!
       event = nil
       finished_segment = false
+      carry_on = false
       SessionStore.with_lock(session.id) do |locked|
         turn = locked.turns.for_version(locked.version).find_by(id: turn_id)
         next unless turn && %w[ready playing].include?(turn.status)
@@ -116,14 +121,23 @@ module Conversation
         turn.audio_clip&.delete
         if turn.last_in_segment?
           finished_segment = true
-          locked.update!(status: "listening")
+          carry_on = turn.next_action == "continue"
+          locked.status = carry_on ? "processing" : "listening"
+          SessionStore.advance_version!(locked) if carry_on
+          locked.save!
         end
       end
       return unless event
 
       session.reload
       broadcast("transcript.committed", event: serialize(event))
-      broadcast("state.changed", status: "listening", nextAction: last_next_action) if finished_segment
+      if carry_on
+        # The last line was aimed at another character: the group answers without waiting for the visitor.
+        broadcast("state.changed", status: "processing")
+        SegmentRunner.enqueue(session.id, session.version)
+      elsif finished_segment
+        broadcast("state.changed", status: "listening", nextAction: last_next_action)
+      end
       event
     end
 

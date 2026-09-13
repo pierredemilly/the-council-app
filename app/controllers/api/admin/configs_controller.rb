@@ -33,7 +33,7 @@ module Api
         params.require(:config).permit(
           :global_system_prompt, :llm_provider, :llm_model, :reasoning_level,
           :stt_provider, :stt_model, :tts_provider, :tts_model,
-          :max_ai_turns, :inactivity_reset_seconds, :resume_window_seconds, :yield_grace_ms,
+          :max_ai_turns, :inactivity_reset_seconds, :resume_window_seconds, :yield_grace_ms, :turn_gap_ms,
           :retry_count, :retry_base_ms, :retry_max_ms, :operating_mode, :fallback_language,
           stt_settings: {}, tts_settings: {}, vad_settings: {}
         )

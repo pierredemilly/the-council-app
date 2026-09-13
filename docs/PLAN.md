@@ -109,6 +109,8 @@ Implementation notes (slice 8): `RetryPolicy#run(on_error:)` reports every faile
 
 Implementation notes (slice 9): Playwright lives in `e2e/` with `playwright.config.mjs` booting Rails in the test environment after `bin/rails e2e:seed` (fake providers, short inactivity and resume windows); tests use `?simulateAudio=true`, a fake media device and `page.clock` for the kiosk timer, and `context.setOffline` for network loss. `?textOnly=true` reuses the simulated player as the audio-free accessibility mode. Stage cues are removed from displayed captions together with their word timings (`lib/captions.js`).
 
+Feedback round 1 (conversation behaviour): `next_action` gains `continue` for passages that end on a line aimed at another character; the server starts the next generation when that line is spoken, and the parser coerces a closing question naming another character to `continue`. The prompt rules now frame a four-way conversation and forbid ending on a question to a character with `wait_for_user`. A new human utterance that supersedes queued or in-flight turns broadcasts `agent.segment.cancel`, and the browser treats speech while the group is thinking as an interruption after the debounce. The avatar highlight follows the locally playing turn only. `turn_gap_ms` (default 700) adds a breath between consecutive lines.
+
 ## 5. Frontend layout
 
 ```
