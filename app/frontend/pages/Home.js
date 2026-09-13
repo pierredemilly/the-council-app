@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { buttonClass } from "~/components/AuthLayout";
 import { useAuth } from "~/lib/auth";
+import { t } from "~/i18n";
 
 export default function Home() {
   const { user, loading, signOut } = useAuth();
@@ -12,9 +13,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 px-4 text-center">
-      <h1 className="text-2xl font-semibold text-gray-900">
-        Rails + React + Vite
-      </h1>
+      <h1 className="text-2xl font-semibold text-gray-900">{t("app.name")}</h1>
 
       {user ? (
         <div className="w-full max-w-sm space-y-4 rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">

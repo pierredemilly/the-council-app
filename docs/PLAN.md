@@ -1,7 +1,7 @@
 # The Council — V1 coding plan
 
-Status: **draft, awaiting validation**. Source: `cc4d8239-four-person-conversation-v1-spec.md`.
-Open questions are collected at the end; nothing below is implemented yet.
+Status: **validated 2026-09-13**. Source: the V1 build specification; decisions recorded in section 8.
+Slices are delivered one PR at a time, each PR carrying a short testing and exploring guide.
 
 ## 0. Decisions already implied by the template
 
@@ -131,8 +131,20 @@ Dependencies to add: `@rails/actioncable`, `@ricky0123/vad-web` (+ `onnxruntime-
 - Playwright (Chromium is preinstalled here): permission prompt, start → speak (fake audio file) → hear ordered clips, interruption, reconnect, resume within/after 10 min (clock mocked), kiosk idle reset. Runs against Rails with `Providers::*::Fake` selected via `PROVIDERS=fake`.
 - Manual museum calibration checklist documented, not automated.
 
-## 8. Open questions
+## 8. Decisions (validated with Pierre, 2026-09-13)
 
-Answers can go inline here, in chat, or on the Notion page once it is shared with the Claude connection (the connection currently only sees the Inrō workspace and gets a 404 on "The Council").
-
-See the chat message / Notion for the numbered list; they cover: app naming, hosting target, LLM model id and reasoning parameter, STT provider choice, ElevenLabs model (v3 vs flash), conversation language, kiosk-mode selection, admin/signup policy, in-process generation threads, VAD library, browser-test tooling, seed personas, and PR granularity.
+| Topic | Decision |
+| --- | --- |
+| Naming | `TheCouncil` / `the_council` / "The Council". Kamal removed entirely. |
+| Hosting | Fly.io: `app` and `worker` process groups from the `Dockerfile`, Fly Postgres, migrations as release command. |
+| LLM | OpenAI Responses API via the official `openai` gem. Model id `gpt-5.6-luna`; `reasoning.effort` from the admin setting (`none` or `low`). |
+| STT | OpenAI transcription for V1; adapter interface kept for Deepgram / ElevenLabs Scribe. |
+| TTS | ElevenLabs, `eleven_v3` by default (audio tags), model exposed as an admin setting. |
+| Language | The UI is fully localized (fr/en now, more later, e.g. ja/ko). V1 conversations are single-language: the language of the visitor's first utterance (STT detection) is stored on the session and drives the prompt and STT hint. Per-character languages and subtitles are V2. |
+| Kiosk mode | `?kiosk` query flag, plus a discreet bottom-right button on the normal page that enters kiosk mode. Inactivity reset applies only in kiosk mode. |
+| Admin | Any signed-in Devise user is an admin; there are no other users. First admin seeded from `ADMIN_EMAIL` / `ADMIN_PASSWORD`; signup disabled in production unless `ALLOW_SIGNUP=true`. |
+| Generation | In-process bounded thread pool inside Puma, version-tagged; Puma is not restarted during an exhibition. |
+| VAD | Silero via `@ricky0123/vad-web` in the browser; thresholds come from the admin VAD settings. |
+| Browser tests | Playwright, as a separate CI job. |
+| Personas | Aphra, Rosa, Claudia. Sheets, avatars and voices supplied later; seeds ship neutral placeholders. |
+| Delivery | One PR per slice against `main`, each with a testing and exploring guide. Provider keys live in Pierre's `.env`; development and CI use fake adapters. |
