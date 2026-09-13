@@ -178,5 +178,20 @@ export const fr = {
     retry_connection: "Réessayer la connexion",
     text_only: "Texte seul",
     sound_on: "Avec le son",
+    tune: {
+      open: "Détection de la voix",
+      title: "Détection de la voix, en direct",
+      hint_live:
+        "Les changements s’appliquent tout de suite à ce micro. Enregistrez pour en faire la valeur par défaut des prochaines conversations.",
+      hint_idle:
+        "Démarrez une conversation pour entendre l’effet. Les valeurs enregistrées s’appliquent aux prochaines conversations.",
+      meter: "Probabilité de parole",
+      speech_detected: "Parole détectée",
+      save: "Enregistrer par défaut",
+      saved: "Enregistré.",
+      unsaved: "Appliqué ici, pas encore enregistré.",
+      revert: "Annuler",
+      close: "Fermer",
+    },
   },
 };

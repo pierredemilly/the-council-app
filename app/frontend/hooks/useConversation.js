@@ -3,7 +3,7 @@ import { api } from "~/lib/api";
 import { subscribeToConversation } from "~/lib/cable";
 import { initialState, playableTurn, reducer } from "~/lib/conversationMachine";
 import AudioPlayer, { SimulatedPlayer } from "~/lib/playback";
-import { startMicrophone } from "~/lib/vad";
+import { retuneMicrophone, startMicrophone } from "~/lib/vad";
 import { readFlag } from "~/hooks/useQueryFlag";
 import {
   clearStoredSession,
@@ -26,6 +26,8 @@ export default function useConversation({ clientMode }) {
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [reconnectExpired, setReconnectExpired] = useState(false);
   const mic = useRef(null);
+  const vadOverride = useRef(null);
+  const speechProbability = useRef(0);
   const interruptTimer = useRef(null);
   const interruptedByVoice = useRef(false);
   const lastTurnEndedAt = useRef(0);
@@ -153,7 +155,8 @@ export default function useConversation({ clientMode }) {
     if (player.current.position() || thinking) {
       player.current.pause();
       const debounce =
-        stateRef.current.config?.vad_settings?.interrupt_min_speech_ms ?? 300;
+        (vadOverride.current ?? stateRef.current.config?.vad_settings)
+          ?.interrupt_min_speech_ms ?? 300;
       // Speech while the group is answering (or still thinking) supersedes that answer after the debounce.
       interruptTimer.current = setTimeout(() => {
         interruptedByVoice.current = true;
@@ -191,16 +194,30 @@ export default function useConversation({ clientMode }) {
     setMicState("starting");
     try {
       mic.current = await startMicrophone({
-        settings: stateRef.current.config?.vad_settings,
+        settings: vadOverride.current ?? stateRef.current.config?.vad_settings,
         onSpeechStart: handleSpeechStart,
         onSpeechEnd: handleSpeechEnd,
         onMisfire: handleMisfire,
+        onProbability: (p) => {
+          speechProbability.current = p;
+        },
       });
       setMicState("on");
     } catch {
       setMicState("denied");
     }
   }, [handleSpeechStart, handleSpeechEnd, handleMisfire]);
+
+  // Live tuning by a signed-in admin: overrides the session's snapshot for this browser only.
+  const tuneVad = useCallback((settings) => {
+    vadOverride.current = settings;
+    retuneMicrophone(mic.current, settings);
+  }, []);
+
+  const readSpeechProbability = useCallback(
+    () => speechProbability.current,
+    []
+  );
 
   const start = useCallback(async () => {
     await unlockAudio();
@@ -431,5 +448,7 @@ export default function useConversation({ clientMode }) {
     retry,
     retryConnection,
     leave,
+    tuneVad,
+    readSpeechProbability,
   };
 }

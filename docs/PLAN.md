@@ -117,6 +117,8 @@ Feedback round 2 (pacing): `continue` no longer triggers generation server-side;
 
 Feedback round 3 (voice): the prompt rules end with a `## Sounding human` section listing the recognised tells of generated text (dashes, negative parallelism, rule of three, warm-ups and validation phrases, therapy speak, inflated vocabulary, hedging, closing morals), distilled from Wikipedia's *Signs of AI writing* guide and similar lists. As a safety net, `ScriptParser` rewrites em and en dashes into commas, ellipses or nothing before a turn is stored or voiced.
 
+Feedback round 3 (live VAD tuning): a signed-in admin sees a **Voice detection** button on the public page. `VadTuner` reuses the admin sliders, shows the live speech probability from `onFrameProcessed`, applies changes to the running `MicVAD` through `setOptions` (an override kept in the hook, ahead of the session snapshot) and saves them through `PUT /api/admin/config`.
+
 ## 5. Frontend layout
 
 ```

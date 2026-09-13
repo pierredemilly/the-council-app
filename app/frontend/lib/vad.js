@@ -31,6 +31,7 @@ export async function startMicrophone({
   onSpeechStart,
   onSpeechEnd,
   onMisfire,
+  onProbability,
 }) {
   const vad = await MicVAD.new({
     ...vadOptions(settings),
@@ -44,6 +45,9 @@ export async function startMicrophone({
     },
     onSpeechStart,
     onVADMisfire: onMisfire,
+    onFrameProcessed: onProbability
+      ? ({ isSpeech }) => onProbability(isSpeech)
+      : undefined,
     onSpeechEnd: (audio) =>
       onSpeechEnd(
         encodeUtterance(audio),
@@ -52,4 +56,9 @@ export async function startMicrophone({
   });
   vad.start();
   return vad;
+}
+
+// Thresholds change on the running microphone; no restart, no new permission prompt.
+export function retuneMicrophone(vad, settings) {
+  vad?.setOptions(vadOptions(settings));
 }
