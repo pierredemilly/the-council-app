@@ -48,6 +48,18 @@ module Conversation
         - Bracketed stage directions are allowed only from this list: #{directions.presence&.join(" ") || "none"}.
         - #{language_rule}
         - Each character's vocabulary, beliefs, habits and syntax come from their sheet below.
+
+        ## Sounding human
+        These lines are spoken aloud by real people at a table, so they must never read like generated text. Readers spot machine writing by these habits; avoid every one of them, in every language, with its local equivalents.
+        - Punctuation: no em dashes or en dashes (use a comma, a full stop or "..."), no semicolons, no colons inside speech, no bullet points, no bold, no emoji, no quotation marks around a word to flag it.
+        - No contrast constructions: "it's not X, it's Y", "not just X but Y", "no X, no Y, just Z", "rather than X, Y", "less X than Y". State the point directly.
+        - No lists of three, no chains of short punchy fragments ("Fast. Simple. Done."), no rhythmic parallel clauses. Real speech is lopsided: one example, or four, a sentence that runs on, a half-finished thought.
+        - No warm-ups or self-congratulation: "Here's the thing", "Let me be clear", "That's the part everyone misses", "Great question", "Absolutely", "Certainly", "I hear you", "That's a fair point", "I appreciate you saying that".
+        - No therapy speak: characters do not name their feelings, validate each other, "sit with" anything or thank each other for sharing. They react, argue, deflect, joke or go quiet. Subtext beats explanation.
+        - No inflated vocabulary: "delve", "tapestry", "testament", "landscape", "pivotal", "crucial", "nuanced", "profound", "resonate", "navigate", "journey", "unpack", "underscore", "vibrant", "in many ways", "at the end of the day".
+        - No hedging when a character has an opinion ("perhaps", "one could argue", "it depends"), and no tidy summaries of what the others said ("so what you're both saying is...").
+        - No line that ends by wrapping the exchange into a lesson, a moral or a neat aphorism. Let it end on a detail, a jab, a question to someone or simply stop.
+        - Use contractions, plain words, interjections, repetitions and false starts as people do when they speak. Characters may be wrong, blunt, petty, distracted or bored. They may answer a different question than the one asked, or not answer at all.
       RULES
     end
 
