@@ -1,9 +1,9 @@
 # Audio calibration
 
 Every installation has its own microphone, loudspeaker placement, room noise
-and echo. These settings live in the admin (Settings → Voice activity
+and echo. These settings are sliders in the admin (Settings → Voice activity
 detection) and take effect for new conversations; tune them on site with the
-real hardware.
+real hardware. Each slider shows its value and a reset link back to the default.
 
 ## What the settings mean
 

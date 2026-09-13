@@ -194,4 +194,49 @@ RSpec.describe Conversation::Orchestrator do
       expect(payload[:config][:agents].size).to eq(3)
     end
   end
+
+  describe "next_action continue" do
+    it "starts the next segment as soon as the last line is spoken, without waiting for the visitor" do
+      llm = instance_double(Providers::Llm::Fake)
+      allow(Providers::Llm::Fake).to receive(:new).and_return(llm)
+      allow(llm).to receive(:complete).and_return(
+        Providers::Llm::Envelope.new(dialogue: "APHRA: Rosa, do you agree?", next_action: "wait_for_user"),
+        Providers::Llm::Envelope.new(dialogue: "ROSA: Not at all. What do you think?", next_action: "wait_for_user")
+      )
+      orchestrator.start_from_utterance!(text: "Hello")
+      first = turns.first
+      expect(first.next_action).to eq("continue")
+
+      orchestrator.playback_completed!(first.id)
+
+      session.reload
+      expect(session.events.where(kind: "agent").pluck(:text)).to eq([ "Rosa, do you agree?" ])
+      expect(turns.pluck(:speaker, :next_action)).to eq([ [ "Rosa", "wait_for_user" ] ])
+      expect(broadcast_types(session).last(2)).to eq(%w[state.changed agent.turn.ready])
+    end
+  end
+
+  describe "an utterance while an answer is queued" do
+    it "cancels the queued answer on the browser too" do
+      orchestrator.start_from_utterance!(text: "First question")
+      expect(turns.count).to eq(3)
+
+      orchestrator.start_from_utterance!(text: "Actually, second question")
+
+      types = broadcast_types(session)
+      expect(types.count("agent.segment.cancel")).to eq(1)
+      expect(session.reload.turns.where(status: "discarded").count).to eq(3)
+      expect(turns.count).to eq(3)
+    end
+
+    it "does not send a cancel when nothing was pending" do
+      orchestrator.start_from_utterance!(text: "Hello")
+      turns.each { |t| orchestrator.playback_completed!(t.id) }
+      before = broadcast_types(session).count("agent.segment.cancel")
+
+      orchestrator.start_from_utterance!(text: "Another")
+
+      expect(broadcast_types(session).count("agent.segment.cancel")).to eq(before)
+    end
+  end
 end

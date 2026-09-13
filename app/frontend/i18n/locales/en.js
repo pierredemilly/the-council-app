@@ -17,6 +17,7 @@ export const en = {
     nav: {
       settings: "Settings",
       characters: "Characters",
+      sessions: "Sessions",
     },
     settings: {
       title: "Live configuration",
@@ -56,7 +57,7 @@ export const en = {
       vad: "Voice activity detection",
       vad_settings: "VAD thresholds (JSON)",
       vad_settings_hint:
-        "Installation-specific. Thresholds are probabilities between 0 and 1; durations are in milliseconds.",
+        "Installation-specific. Tune on site with the real microphone and loudspeakers; see docs/CALIBRATION.md.",
       deployment: "Deployment",
       operating_mode: "Operating mode",
       operating_mode_hint:
@@ -64,6 +65,28 @@ export const en = {
       operating_modes: {
         cloud_pi: "Cloud only (Raspberry Pi client)",
         local_gpu: "Local-server capable (GPU computer)",
+      },
+      turn_gap_ms: "Pause between characters (ms)",
+      turn_gap_ms_hint:
+        "Silence left between two consecutive lines of a segment.",
+      vad_sliders: {
+        positive_speech_threshold: "Speech threshold",
+        positive_speech_threshold_hint:
+          "Probability above which a frame counts as speech. Raise it in noisy rooms.",
+        negative_speech_threshold: "Silence threshold",
+        negative_speech_threshold_hint:
+          "Probability below which a frame counts as silence. Keep it under the speech threshold.",
+        min_speech_ms: "Minimum speech",
+        min_speech_ms_hint: "Shorter bursts (coughs, chairs) are ignored.",
+        redemption_ms: "End-of-utterance silence",
+        redemption_ms_hint:
+          "Silence tolerated inside a sentence before the utterance is considered finished.",
+        pre_speech_pad_ms: "Pre-speech padding",
+        pre_speech_pad_ms_hint:
+          "Audio kept from before the detected start so first syllables are not cut.",
+        interrupt_min_speech_ms: "Interruption debounce",
+        interrupt_min_speech_ms_hint:
+          "Continuous speech needed, while a character talks, before the interruption is confirmed.",
       },
     },
     characters: {
@@ -79,6 +102,30 @@ export const en = {
         "Long-form. Biography, beliefs, vocabulary, habits, how this character disagrees.",
       upload_avatar: "Upload avatar",
       remove_avatar: "Remove avatar",
+      color: "Colour",
+      color_hint: "Used for the name in the transcript and the avatar glow.",
+    },
+    reset: "reset",
+    sessions: {
+      title: "Sessions",
+      intro:
+        "The fifty most recent conversations. Open one to read or copy its transcript.",
+      empty: "No conversation yet.",
+      started: "Started",
+      status: "Status",
+      turns: "Visitor / characters",
+      duration: "Duration",
+      first_line: "First line",
+      transcript: "Transcript",
+      no_events: "Nothing was said.",
+      copy: "Copy transcript",
+      copied: "Copied!",
+      delete: "Delete",
+      delete_confirm: "Delete this conversation and its transcript for good?",
+      metrics: "Latency",
+      metrics_pending: "Aggregated once the conversation is finalized.",
+      errors: "Provider errors",
+      no_errors: "No provider error.",
     },
   },
   conversation: {

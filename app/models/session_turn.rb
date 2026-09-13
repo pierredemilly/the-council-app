@@ -27,7 +27,7 @@
 #
 class SessionTurn < ApplicationRecord
   STATUSES = %w[pending ready playing spoken discarded].freeze
-  NEXT_ACTIONS = %w[wait_for_user yield_to_user].freeze
+  NEXT_ACTIONS = %w[wait_for_user yield_to_user continue].freeze
 
   belongs_to :conversation_session
   has_one :audio_clip, dependent: :delete

@@ -34,12 +34,14 @@ module Conversation
         You write the next stretch of dialogue for exactly these three characters: #{labels.join(", ")}. The human taking part is labelled #{HUMAN_LABEL} and is never written by you.
         Return JSON with two keys: "dialogue" and "next_action".
         "dialogue" is script text: one line per turn, each paragraph formatted as `NAME: words`, using the exact labels above and blank lines between turns. No narration, no stage business outside brackets, no markdown.
-        "next_action" is "wait_for_user" when the last line asks the #{HUMAN_LABEL} something or clearly needs their answer, and "yield_to_user" when the characters pause naturally but could go on.
+        "next_action" is "wait_for_user" when the last line asks the #{HUMAN_LABEL} something or clearly needs their answer; "yield_to_user" when the characters pause naturally but could go on; "continue" when the last line is addressed to another character (a question, a challenge, an invitation to react) so the group carries on without waiting for the #{HUMAN_LABEL}.
 
         ## Rules
         - At most #{@input.max_turns} turns in total and no character speaks more than twice.
         - Keep turns short and spoken; the whole passage must take well under a minute to say aloud.
+        - This is a four-way conversation, not an interview. The #{HUMAN_LABEL} is one participant among four: in most passages at least one line answers, contradicts or teases another character rather than the #{HUMAN_LABEL}, and the characters pursue their own disagreements.
         - No fixed speaking order. Characters react to each other and to the #{HUMAN_LABEL}; they may interrupt one another when it feels natural.
+        - Do not turn every line back to the #{HUMAN_LABEL} with a question. Ask the #{HUMAN_LABEL} something only when their view is genuinely wanted, and never end a passage on a question to another character with "wait_for_user".
         - Introduce a new topic only as a natural continuation of what was just said.
         - Never write, paraphrase or presume the #{HUMAN_LABEL}'s words.
         - A line marked (interrupted by the visitor) was cut off mid-sentence: the speaker did not finish and the group heard the #{HUMAN_LABEL} instead. React to that.

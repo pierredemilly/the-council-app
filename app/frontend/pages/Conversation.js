@@ -65,6 +65,7 @@ export default function Conversation() {
   }, []);
 
   const agents = state.config?.agents ?? publicConfig?.agents ?? [];
+  const colors = Object.fromEntries(agents.map((a) => [a.name, a.color]));
   const reconnecting = isReconnecting(state);
   const phase = reconnecting
     ? "reconnecting"
@@ -85,10 +86,7 @@ export default function Conversation() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-stone-900 via-stone-950 to-black px-4 py-8 text-center text-stone-100">
       <main className="flex flex-1 flex-col items-center justify-center gap-8">
-        <AvatarStage
-          agents={agents}
-          speaker={state.phase === "speaking" ? state.speaker : null}
-        />
+        <AvatarStage agents={agents} speaker={state.current?.speaker ?? null} />
 
         {!active && (
           <div className="flex flex-col items-center gap-4">
@@ -173,6 +171,7 @@ export default function Conversation() {
               current={state.current}
               positionMs={positionMs}
               large={kiosk || textOnly}
+              colors={colors}
             />
             {state.phase !== "finalized" ? (
               <TextComposer

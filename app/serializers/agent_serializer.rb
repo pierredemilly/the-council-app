@@ -3,6 +3,7 @@
 # Table name: agents
 #
 #  id          :bigint           not null, primary key
+#  color       :string
 #  name        :string           not null
 #  personality :text             default(""), not null
 #  position    :integer          not null
@@ -20,7 +21,7 @@ class AgentSerializer
   include Alba::Resource
   include Rails.application.routes.url_helpers
 
-  attributes :id, :position, :name, :personality, :voice_id, :voice_name, :updated_at
+  attributes :id, :position, :name, :personality, :voice_id, :voice_name, :color, :updated_at
 
   attribute :avatar_url do |agent|
     rails_blob_path(agent.avatar, only_path: true) if agent.avatar.attached?

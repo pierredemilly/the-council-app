@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_140002) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_150100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -50,6 +50,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_140002) do
     t.string "voice_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "color"
     t.index "lower((name)::text)", name: "index_agents_on_lower_name", unique: true
     t.index ["position"], name: "index_agents_on_position", unique: true
   end
@@ -77,6 +78,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_140002) do
     t.string "fallback_language", default: "en", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "turn_gap_ms", default: 700, null: false
   end
 
   create_table "audio_clips", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

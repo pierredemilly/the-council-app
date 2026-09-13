@@ -3,7 +3,7 @@ module Conversation
   class ScriptParser
     class Invalid < Conversation::Error; end
 
-    NEXT_ACTIONS = %w[wait_for_user yield_to_user].freeze
+    NEXT_ACTIONS = %w[wait_for_user yield_to_user continue].freeze
     MAX_TURNS_PER_SPEAKER = 2
     LINE = /\A([^:\n]{1,60}):\s*(.+)\z/m
     DIRECTION = /\[([^\[\]]{1,40})\]/
@@ -30,10 +30,20 @@ module Conversation
         raise Invalid, "#{speaker} speaks #{spoken.size} times; the maximum is #{MAX_TURNS_PER_SPEAKER}" if spoken.size > MAX_TURNS_PER_SPEAKER
       end
 
+      next_action = "continue" if next_action == "wait_for_user" && addresses_character?(turns.last)
       Providers::Llm::Segment.new(turns: turns, next_action: next_action, usage: envelope.usage, latency_ms: envelope.latency_ms)
     end
 
     private
+
+    # A closing question aimed at another character must not leave the group waiting for the visitor.
+    def addresses_character?(turn)
+      return false unless turn.text.rstrip.end_with?("?")
+
+      others = @canonical.values - [ turn.speaker ]
+      others.any? { |name| turn.text.match?(/\b#{Regexp.escape(name)}\b/i) }
+    end
+
 
     def split_lines(dialogue)
       dialogue.to_s.gsub("\r", "").split(/\n+/).map(&:strip).reject(&:blank?)

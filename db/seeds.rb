@@ -9,6 +9,7 @@ end
 [ "Aphra", "Rosa", "Claudia" ].each.with_index(1) do |name, position|
   Agent.find_or_create_by!(position: position) do |agent|
     agent.name = name
+    agent.color = Agent::PALETTE[position - 1]
     agent.personality = Rails.root.join("db/seeds/placeholder_personality.txt").read.gsub("{name}", name)
   end
 end

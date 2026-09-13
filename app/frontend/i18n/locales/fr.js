@@ -17,6 +17,7 @@ export const fr = {
     nav: {
       settings: "Réglages",
       characters: "Personnages",
+      sessions: "Conversations",
     },
     settings: {
       title: "Configuration en direct",
@@ -57,7 +58,7 @@ export const fr = {
       vad: "Détection de la voix",
       vad_settings: "Seuils VAD (JSON)",
       vad_settings_hint:
-        "Propres à l’installation. Les seuils sont des probabilités entre 0 et 1 ; les durées sont en millisecondes.",
+        "Propre à l’installation. À régler sur place avec le vrai micro et les enceintes ; voir docs/CALIBRATION.md.",
       deployment: "Déploiement",
       operating_mode: "Mode de fonctionnement",
       operating_mode_hint:
@@ -65,6 +66,29 @@ export const fr = {
       operating_modes: {
         cloud_pi: "Cloud uniquement (client Raspberry Pi)",
         local_gpu: "Serveur local possible (ordinateur GPU)",
+      },
+      turn_gap_ms: "Pause entre les personnages (ms)",
+      turn_gap_ms_hint:
+        "Silence laissé entre deux répliques consécutives d’un segment.",
+      vad_sliders: {
+        positive_speech_threshold: "Seuil de parole",
+        positive_speech_threshold_hint:
+          "Probabilité au-dessus de laquelle une trame compte comme de la parole. À augmenter dans une salle bruyante.",
+        negative_speech_threshold: "Seuil de silence",
+        negative_speech_threshold_hint:
+          "Probabilité en dessous de laquelle une trame compte comme du silence. À garder sous le seuil de parole.",
+        min_speech_ms: "Parole minimale",
+        min_speech_ms_hint:
+          "Les sons plus courts (toux, chaises) sont ignorés.",
+        redemption_ms: "Silence de fin de phrase",
+        redemption_ms_hint:
+          "Silence toléré au milieu d’une phrase avant de considérer la prise de parole terminée.",
+        pre_speech_pad_ms: "Marge avant la parole",
+        pre_speech_pad_ms_hint:
+          "Audio conservé avant le début détecté pour ne pas couper les premières syllabes.",
+        interrupt_min_speech_ms: "Délai d’interruption",
+        interrupt_min_speech_ms_hint:
+          "Parole continue nécessaire, pendant qu’un personnage parle, pour confirmer l’interruption.",
       },
     },
     characters: {
@@ -80,6 +104,32 @@ export const fr = {
         "Format long. Biographie, convictions, vocabulaire, habitudes, façon de contredire les autres.",
       upload_avatar: "Téléverser un avatar",
       remove_avatar: "Retirer l’avatar",
+      color: "Couleur",
+      color_hint:
+        "Utilisée pour le nom dans la transcription et le halo de l’avatar.",
+    },
+    reset: "défaut",
+    sessions: {
+      title: "Conversations",
+      intro:
+        "Les cinquante conversations les plus récentes. Ouvrez-en une pour lire ou copier sa transcription.",
+      empty: "Aucune conversation pour l’instant.",
+      started: "Début",
+      status: "État",
+      turns: "Visiteur / personnages",
+      duration: "Durée",
+      first_line: "Première phrase",
+      transcript: "Transcription",
+      no_events: "Rien n’a été dit.",
+      copy: "Copier la transcription",
+      copied: "Copié !",
+      delete: "Supprimer",
+      delete_confirm:
+        "Supprimer définitivement cette conversation et sa transcription ?",
+      metrics: "Latence",
+      metrics_pending: "Agrégée une fois la conversation terminée.",
+      errors: "Erreurs des fournisseurs",
+      no_errors: "Aucune erreur de fournisseur.",
     },
   },
   conversation: {

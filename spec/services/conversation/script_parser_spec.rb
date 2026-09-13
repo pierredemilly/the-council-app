@@ -59,4 +59,12 @@ RSpec.describe Conversation::ScriptParser do
   it "rejects unknown next actions" do
     expect { parse("ROSA: Hi.", next_action: "stop") }.to raise_error(described_class::Invalid, /next_action/)
   end
+
+  it "accepts continue and turns a closing question to another character into continue" do
+    expect(parse("ROSA: Claudia, do you agree?", next_action: "continue").next_action).to eq("continue")
+    expect(parse("ROSA: Claudia, do you agree?").next_action).to eq("continue")
+    expect(parse("ROSA: What do you think, my friend?").next_action).to eq("wait_for_user")
+    expect(parse("ROSA: Claudia is wrong, as usual.").next_action).to eq("wait_for_user")
+    expect(parse("ROSA: Do you remember what I told you?", next_action: "yield_to_user").next_action).to eq("yield_to_user")
+  end
 end

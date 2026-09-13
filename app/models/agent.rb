@@ -3,6 +3,7 @@
 # Table name: agents
 #
 #  id          :bigint           not null, primary key
+#  color       :string
 #  name        :string           not null
 #  personality :text             default(""), not null
 #  position    :integer          not null
@@ -22,6 +23,8 @@ class Agent < ApplicationRecord
   PERSONALITY_CHAR_LIMIT = 30_000
   AVATAR_BYTE_LIMIT = 5.megabytes
   AVATAR_CONTENT_TYPES = %w[image/png image/jpeg image/webp].freeze
+  PALETTE = %w[#f59e0b #38bdf8 #f472b6].freeze
+  HEX_COLOR = /\A#[0-9a-f]{6}\z/i
 
   has_one_attached :avatar
 
@@ -31,6 +34,9 @@ class Agent < ApplicationRecord
                    format: { without: /[:\n\r]/, message: "cannot contain colons or line breaks" }
   validates :personality, length: { maximum: PERSONALITY_CHAR_LIMIT }
   validates :voice_id, :voice_name, length: { maximum: 200 }, allow_nil: true
+  validates :color, format: { with: HEX_COLOR, message: "must be a hex colour like #f59e0b" }
+
+  before_validation { self.color = (color.presence || PALETTE[(position.to_i - 1) % PALETTE.size]).to_s.downcase }
   validate :avatar_is_a_small_image
 
   scope :ordered, -> { order(:position) }

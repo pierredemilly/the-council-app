@@ -12,7 +12,7 @@ export default function AgentCard({ agent, voices, onSaved }) {
   const [error, setError] = useState(null);
   const fileInput = useRef(null);
 
-  const dirty = ["name", "personality", "voice_id"].some(
+  const dirty = ["name", "personality", "voice_id", "color"].some(
     (key) => (form[key] ?? "") !== (agent[key] ?? "")
   );
 
@@ -36,9 +36,9 @@ export default function AgentCard({ agent, voices, onSaved }) {
     setSaving(true);
     setError(null);
     try {
-      const { name, personality, voice_id, voice_name } = form;
+      const { name, personality, voice_id, voice_name, color } = form;
       const data = await api.patch(`/api/admin/agents/${agent.id}`, {
-        agent: { name, personality, voice_id, voice_name },
+        agent: { name, personality, voice_id, voice_name, color },
       });
       onSaved(data.agent);
       setForm(data.agent);
@@ -97,7 +97,10 @@ export default function AgentCard({ agent, voices, onSaved }) {
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-3">
-        <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-gray-200">
+        <div
+          className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-4"
+          style={{ "--tw-ring-color": form.color ?? "#f59e0b" }}
+        >
           {form.avatar_url ? (
             <img
               src={form.avatar_url}
@@ -145,6 +148,26 @@ export default function AgentCard({ agent, voices, onSaved }) {
               maxLength={40}
               required
             />
+          </Field>
+          <Field
+            label={t("admin.characters.color")}
+            hint={t("admin.characters.color_hint")}
+          >
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={form.color ?? "#f59e0b"}
+                onChange={(e) => set("color")(e.target.value)}
+                className="h-9 w-14 cursor-pointer rounded border border-gray-300 bg-white p-1"
+                aria-label={t("admin.characters.color")}
+              />
+              <span
+                className="rounded-full px-3 py-1 text-sm font-semibold text-stone-900"
+                style={{ backgroundColor: form.color ?? "#f59e0b" }}
+              >
+                {form.name}
+              </span>
+            </div>
           </Field>
           <Field label={t("admin.characters.voice")}>
             <Select

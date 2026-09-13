@@ -23,6 +23,7 @@ require "rails_helper"
 #  tts_model                :string           default("eleven_v3"), not null
 #  tts_provider             :string           default("eleven_labs"), not null
 #  tts_settings             :jsonb            not null
+#  turn_gap_ms              :integer          default(700), not null
 #  vad_settings             :jsonb            not null
 #  yield_grace_ms           :integer          default(2500), not null
 #  created_at               :datetime         not null
@@ -68,6 +69,17 @@ RSpec.describe AppConfig, type: :model do
 
       config.stt_settings = { "blob" => "x" * 5.kilobytes }
       expect(config).not_to be_valid
+    end
+
+    it "keeps VAD values inside the slider ranges" do
+      config.vad_settings = config.vad_settings.merge("positive_speech_threshold" => 1.5)
+      expect(config).not_to be_valid
+
+      config.vad_settings = config.vad_settings.merge("positive_speech_threshold" => 0.3, "negative_speech_threshold" => 0.6)
+      expect(config).not_to be_valid
+
+      config.vad_settings = config.vad_settings.merge("positive_speech_threshold" => 0.6, "negative_speech_threshold" => 0.3, "redemption_ms" => 900)
+      expect(config).to be_valid
     end
   end
 end

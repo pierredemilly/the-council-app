@@ -21,6 +21,7 @@
 #  tts_model                :string           default("eleven_v3"), not null
 #  tts_provider             :string           default("eleven_labs"), not null
 #  tts_settings             :jsonb            not null
+#  turn_gap_ms              :integer          default(700), not null
 #  vad_settings             :jsonb            not null
 #  yield_grace_ms           :integer          default(2500), not null
 #  created_at               :datetime         not null
@@ -44,6 +45,15 @@ class AppConfig < ApplicationRecord
     "pre_speech_pad_ms" => 300,
     "interrupt_min_speech_ms" => 300
   }.freeze
+  # Ranges the admin sliders and the API both enforce.
+  VAD_RANGES = {
+    "positive_speech_threshold" => (0.05..0.95),
+    "negative_speech_threshold" => (0.05..0.95),
+    "min_speech_ms" => (0..2000),
+    "redemption_ms" => (0..3000),
+    "pre_speech_pad_ms" => (0..1000),
+    "interrupt_min_speech_ms" => (0..2000)
+  }.freeze
 
   validates :llm_provider, inclusion: { in: LLM_PROVIDERS }
   validates :stt_provider, inclusion: { in: STT_PROVIDERS }
@@ -57,11 +67,13 @@ class AppConfig < ApplicationRecord
   validates :inactivity_reset_seconds, :resume_window_seconds,
             numericality: { only_integer: true, in: 30..3600 }
   validates :yield_grace_ms, numericality: { only_integer: true, in: 0..30_000 }
+  validates :turn_gap_ms, numericality: { only_integer: true, in: 0..5_000 }
   validates :retry_count, numericality: { only_integer: true, in: 0..10 }
   validates :retry_base_ms, numericality: { only_integer: true, in: 50..10_000 }
   validates :retry_max_ms, numericality: { only_integer: true, in: 100..60_000 }
   validate :retry_max_not_below_base
   validate :settings_are_small_objects
+  validate :vad_settings_in_range
 
   after_initialize :apply_vad_defaults, if: :new_record?
 
@@ -79,6 +91,21 @@ class AppConfig < ApplicationRecord
     return if retry_max_ms.nil? || retry_base_ms.nil? || retry_max_ms >= retry_base_ms
 
     errors.add(:retry_max_ms, "must be greater than or equal to the base backoff")
+  end
+
+  def vad_settings_in_range
+    return unless vad_settings.is_a?(Hash)
+
+    VAD_RANGES.each do |key, range|
+      value = vad_settings[key]
+      next if value.nil?
+
+      errors.add(:vad_settings, "#{key} must be between #{range.min} and #{range.max}") unless value.is_a?(Numeric) && range.cover?(value)
+    end
+    if vad_settings["negative_speech_threshold"].is_a?(Numeric) && vad_settings["positive_speech_threshold"].is_a?(Numeric) &&
+       vad_settings["negative_speech_threshold"] > vad_settings["positive_speech_threshold"]
+      errors.add(:vad_settings, "negative_speech_threshold must not exceed positive_speech_threshold")
+    end
   end
 
   def settings_are_small_objects

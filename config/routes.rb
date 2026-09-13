@@ -28,6 +28,7 @@ Rails.application.routes.draw do
         end
       end
       resources :voices, only: :index
+      resources :sessions, only: %i[index show destroy]
     end
   end
 

@@ -5,6 +5,7 @@ require "rails_helper"
 # Table name: agents
 #
 #  id          :bigint           not null, primary key
+#  color       :string
 #  name        :string           not null
 #  personality :text             default(""), not null
 #  position    :integer          not null
@@ -50,5 +51,14 @@ RSpec.describe Agent, type: :model do
     agent.avatar.attach(io: file_fixture("avatar.txt").open, filename: "avatar.txt", content_type: "text/plain")
     expect(agent).not_to be_valid
     expect(agent.errors[:avatar]).to be_present
+  end
+
+  it "gets a palette colour by position and validates custom ones" do
+    expect(Agent.create!(position: 2, name: "Rosa").color).to eq("#38bdf8")
+    agent.color = "#ABCDEF"
+    expect(agent).to be_valid
+    expect(agent.color).to eq("#abcdef")
+    agent.color = "blue"
+    expect(agent).not_to be_valid
   end
 end
