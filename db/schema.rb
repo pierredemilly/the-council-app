@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_121439) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -77,6 +77,59 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_121439) do
     t.string "fallback_language", default: "en", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "conversation_events", force: :cascade do |t|
+    t.uuid "conversation_session_id", null: false
+    t.integer "seq", null: false
+    t.string "kind", null: false
+    t.string "speaker"
+    t.text "text", null: false
+    t.boolean "interrupted", default: false, null: false
+    t.integer "spoken_ms"
+    t.jsonb "latency", default: {}, null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_session_id", "seq"], name: "index_conversation_events_on_conversation_session_id_and_seq", unique: true
+    t.index ["conversation_session_id"], name: "index_conversation_events_on_conversation_session_id"
+  end
+
+  create_table "conversation_sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "client_token_digest", null: false
+    t.string "status", default: "created", null: false
+    t.string "client_mode", default: "browser", null: false
+    t.jsonb "config_snapshot", default: {}, null: false
+    t.integer "version", default: 0, null: false
+    t.integer "next_seq", default: 1, null: false
+    t.string "language"
+    t.datetime "started_at", null: false
+    t.datetime "first_utterance_at"
+    t.datetime "last_seen_at", null: false
+    t.datetime "last_activity_at", null: false
+    t.datetime "finalized_at"
+    t.string "finalize_reason"
+    t.jsonb "metrics", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status", "last_seen_at"], name: "index_conversation_sessions_on_status_and_last_seen_at"
+  end
+
+  create_table "session_turns", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "conversation_session_id", null: false
+    t.uuid "generation_id", null: false
+    t.integer "version", null: false
+    t.integer "position", null: false
+    t.string "speaker", null: false
+    t.text "text", null: false
+    t.string "next_action"
+    t.string "status", default: "pending", null: false
+    t.integer "duration_ms"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_session_id", "generation_id", "position"], name: "index_session_turns_on_generation_position", unique: true
+    t.index ["conversation_session_id", "status"], name: "index_session_turns_on_conversation_session_id_and_status"
+    t.index ["conversation_session_id"], name: "index_session_turns_on_conversation_session_id"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -235,6 +288,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_121439) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "conversation_events", "conversation_sessions"
+  add_foreign_key "session_turns", "conversation_sessions"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

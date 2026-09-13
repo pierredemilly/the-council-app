@@ -1,15 +1,13 @@
-# examples:
-#   periodic_cleanup:
-#     class: CleanSoftDeletedRecordsJob
-#     queue: background
-#     args: [ 1000, { batch_size: 500 } ]
-#     schedule: every hour
-#   periodic_cleanup_with_command:
-#     command: "SoftDeletedRecord.due.delete_all"
-#     priority: 2
-#     schedule: at 5am every day
+# Scheduled Solid Queue jobs. Nothing on the realtime conversation path runs here.
+finalize_stale_sessions: &finalize_stale_sessions
+  class: FinalizeStaleSessionsJob
+  schedule: every minute
+
+development:
+  finalize_stale_sessions: *finalize_stale_sessions
 
 production:
+  finalize_stale_sessions: *finalize_stale_sessions
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12

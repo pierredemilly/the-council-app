@@ -81,4 +81,32 @@ export const en = {
       remove_avatar: "Remove avatar",
     },
   },
+  conversation: {
+    idle_hint:
+      "Three characters are waiting for you. Start the conversation and speak first: they will answer.",
+    start: "Start conversation",
+    speak_first:
+      "Say something to begin. The characters answer once you have spoken.",
+    type_placeholder: "Type what you want to say…",
+    send: "Send",
+    interrupt: "Interrupt",
+    retry: "Try again",
+    finished: "This conversation has ended.",
+    new_conversation: "Start a new conversation",
+    transcript: "Transcript",
+    transcript_empty: "The transcript will appear here.",
+    you: "You",
+    admin: "Admin",
+    leave: "Leave",
+    kiosk_mode: "Kiosk mode",
+    status: {
+      starting: "Connecting…",
+      listening: "Listening",
+      processing: "Thinking…",
+      speaking: "Speaking",
+      errored: "Something went wrong",
+      reconnecting: "Reconnecting…",
+      finalized: "Ended",
+    },
+  },
 };

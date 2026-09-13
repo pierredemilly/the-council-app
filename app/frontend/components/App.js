@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "~/lib/auth";
-import Home from "~/pages/Home";
+import Conversation from "~/pages/Conversation";
 import Login from "~/pages/Login";
 import Signup from "~/pages/Signup";
 import ForgotPassword from "~/pages/ForgotPassword";
@@ -15,7 +15,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Conversation />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
