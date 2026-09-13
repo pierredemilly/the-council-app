@@ -158,9 +158,7 @@ jobs:
           RAILS_ENV: test
           CI: true
           DATABASE_URL: postgres://postgres:postgres@localhost:5432
-        run: |
-          bin/rails db:test:prepare
-          yarn e2e
+        run: yarn e2e
 
       - name: Upload Playwright traces
         if: failure()

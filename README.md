@@ -205,8 +205,9 @@ yarn test                  # Vitest: client state machine, captions, VAD mapping
 yarn e2e                   # Playwright: real browser against the fake providers
 ```
 
-`yarn e2e` boots the app in the test environment (`bin/rails e2e:seed` points
-the live configuration at the fake providers, then `bin/rails server -e test`)
+`yarn e2e` boots the app in the test environment on its own database
+(`TEST_DATABASE=the_council_e2e`; `bin/rails e2e:seed` points the live
+configuration at the fake providers, then `bin/rails server -e test`)
 and drives Chromium with a fake microphone through start, ordered playback,
 interruption, resume, kiosk idle reset and network loss. Build the test
 assets first with `bin/vite build --mode=test`. Traces are kept on failure in
