@@ -50,4 +50,16 @@ RSpec.describe ConversationSession, type: :model do
     session = create_conversation
     expect(session.resume_deadline).to be_within(1.second).of(session.last_seen_at + 600.seconds)
   end
+
+  it "can be destroyed with its events, turns, clips and error log" do
+    session = create_conversation
+    Conversation::Orchestrator.new(session).start_from_utterance!(text: "Hello")
+    ProviderError.record!(session: session, stage: "llm", provider: "fake", error: Providers::Error.new("x"))
+    expect(session.audio_clips.count).to eq(3)
+
+    expect { session.destroy! }.not_to raise_error
+    expect(AudioClip.count).to eq(0)
+    expect(SessionTurn.count).to eq(0)
+    expect(ProviderError.last.conversation_session_id).to be_nil
+  end
 end

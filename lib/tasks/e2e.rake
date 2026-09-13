@@ -8,6 +8,6 @@ namespace :e2e do
       inactivity_reset_seconds: 30, resume_window_seconds: 60, yield_grace_ms: 500
     )
     Agent.ordered.each_with_index { |agent, index| agent.update!(voice_id: %w[fake-alto fake-mezzo fake-tenor][index]) }
-    ConversationSession.delete_all
+    ConversationSession.destroy_all
   end
 end

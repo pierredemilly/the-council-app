@@ -30,8 +30,9 @@ class ConversationSession < ApplicationRecord
   CLIENT_MODES = %w[browser kiosk].freeze
 
   has_many :events, class_name: "ConversationEvent", dependent: :delete_all
-  has_many :turns, class_name: "SessionTurn", dependent: :delete_all
+  # Clips reference turns, so they must go first when a session is destroyed.
   has_many :audio_clips, dependent: :delete_all
+  has_many :turns, class_name: "SessionTurn", dependent: :delete_all
   has_many :provider_errors, dependent: :nullify
 
   attr_reader :client_token
