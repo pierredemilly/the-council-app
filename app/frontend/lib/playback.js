@@ -191,10 +191,11 @@ export class SimulatedPlayer {
 
   position() {
     if (!this.active) return null;
+    const now = this.pausedAt ?? performance.now();
     return {
       turnId: this.active.turnId,
       positionMs: Math.min(
-        Math.round(performance.now() - this.active.startedAt),
+        Math.round(now - this.active.startedAt),
         this.active.durationMs
       ),
       durationMs: this.active.durationMs,
