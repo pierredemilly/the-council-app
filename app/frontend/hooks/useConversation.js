@@ -348,12 +348,19 @@ export default function useConversation({ clientMode }) {
     };
   }, [state.current, send]);
 
-  // Natural opening: give the visitor a moment, then let the characters carry on.
+  // Natural opening or a line aimed at another character: give the visitor a moment, then carry on.
   useEffect(() => {
     clearTimeout(graceTimer.current);
-    if (state.phase !== "listening" || state.nextAction !== "yield_to_user")
+    if (
+      state.phase !== "listening" ||
+      !["yield_to_user", "continue"].includes(state.nextAction)
+    )
       return undefined;
-    const grace = state.config?.yield_grace_ms ?? 2500;
+    // A line aimed at another character resumes sooner than a natural pause, but never instantly.
+    const grace =
+      state.nextAction === "continue"
+        ? (state.config?.continue_grace_ms ?? 2000)
+        : (state.config?.yield_grace_ms ?? 5000);
     graceTimer.current = setTimeout(() => send("turn.request", {}), grace);
     return () => clearTimeout(graceTimer.current);
   }, [state.phase, state.nextAction, state.config, send]);

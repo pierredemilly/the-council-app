@@ -196,23 +196,48 @@ RSpec.describe Conversation::Orchestrator do
   end
 
   describe "next_action continue" do
-    it "starts the next segment as soon as the last line is spoken, without waiting for the visitor" do
-      llm = instance_double(Providers::Llm::Fake)
+    let(:llm) { instance_double(Providers::Llm::Fake) }
+
+    before do
       allow(Providers::Llm::Fake).to receive(:new).and_return(llm)
       allow(llm).to receive(:complete).and_return(
         Providers::Llm::Envelope.new(dialogue: "APHRA: Rosa, do you agree?", next_action: "wait_for_user"),
-        Providers::Llm::Envelope.new(dialogue: "ROSA: Not at all. What do you think?", next_action: "wait_for_user")
+        Providers::Llm::Envelope.new(dialogue: "ROSA: Not at all. Claudia, you tell her?", next_action: "continue"),
+        Providers::Llm::Envelope.new(dialogue: "CLAUDIA: Enough, both of you.", next_action: "yield_to_user")
       )
+    end
+
+    it "hands the pacing to the browser: the segment ends listening with nextAction continue" do
       orchestrator.start_from_utterance!(text: "Hello")
       first = turns.first
       expect(first.next_action).to eq("continue")
 
       orchestrator.playback_completed!(first.id)
 
-      session.reload
+      expect(session.reload.status).to eq("listening")
+      expect(broadcasts_for(session).last["payload"]).to eq("status" => "listening", "nextAction" => "continue")
       expect(session.events.where(kind: "agent").pluck(:text)).to eq([ "Rosa, do you agree?" ])
-      expect(turns.pluck(:speaker, :next_action)).to eq([ [ "Rosa", "wait_for_user" ] ])
-      expect(broadcast_types(session).last(2)).to eq(%w[state.changed agent.turn.ready])
+    end
+
+    it "lets the group chain segments only up to the unprompted cap, then waits for the visitor" do
+      AppConfig.current.update!(max_unprompted_segments: 2)
+      session
+      orchestrator.start_from_utterance!(text: "Hello")
+      orchestrator.playback_completed!(turns.first.id)
+
+      orchestrator.request_turn!
+      expect(session.reload.status).to eq("processing")
+      orchestrator.playback_completed!(turns.first.id)
+      expect(broadcasts_for(session).last["payload"]).to eq("status" => "listening", "nextAction" => "wait_for_user")
+
+      version = session.reload.version
+      orchestrator.request_turn!
+      expect(session.reload.status).to eq("listening")
+      expect(session.version).to eq(version)
+      expect(broadcasts_for(session).last["payload"]).to eq("status" => "listening", "nextAction" => "wait_for_user")
+
+      orchestrator.start_from_utterance!(text: "Go on")
+      expect(session.reload.status).to eq("processing")
     end
   end
 

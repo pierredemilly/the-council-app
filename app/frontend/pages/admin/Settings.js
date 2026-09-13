@@ -215,6 +215,29 @@ export default function Settings() {
             />
           </Field>
           <Field
+            label={t("admin.settings.continue_grace_ms")}
+            hint={t("admin.settings.continue_grace_ms_hint")}
+          >
+            <NumberInput
+              value={form.continue_grace_ms}
+              onChange={set("continue_grace_ms")}
+              min={0}
+              max={30000}
+              step={100}
+            />
+          </Field>
+          <Field
+            label={t("admin.settings.max_unprompted_segments")}
+            hint={t("admin.settings.max_unprompted_segments_hint")}
+          >
+            <NumberInput
+              value={form.max_unprompted_segments}
+              onChange={set("max_unprompted_segments")}
+              min={0}
+              max={10}
+            />
+          </Field>
+          <Field
             label={t("admin.settings.turn_gap_ms")}
             hint={t("admin.settings.turn_gap_ms_hint")}
           >

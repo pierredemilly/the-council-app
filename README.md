@@ -86,10 +86,13 @@ subscription per session plus a few JSON endpoints. Everything is described in
   resets move the version, so late results are discarded instead of spoken.
 - `next_action` has three values: `wait_for_user` (a question to the visitor),
   `yield_to_user` (a natural pause, the group resumes after the grace period)
-  and `continue` (the last line is aimed at another character, so the next
-  segment is generated as soon as it is spoken). The parser also turns a
-  closing question that names another character into `continue`. A configurable
-  pause (`turn_gap_ms`) separates two consecutive lines.
+  and `continue` (the last line is aimed at another character). Both `yield`
+  and `continue` are paced by the browser: `yield_grace_ms` and
+  `continue_grace_ms` of silence pass before it asks for the next segment, so
+  the visitor can step in, and the server stops chaining after
+  `max_unprompted_segments` passages without a new visitor line. The parser
+  also turns a closing question that names another character into `continue`.
+  A configurable pause (`turn_gap_ms`) separates two consecutive lines.
 - The browser owns playback timing: it reports `playback.started`,
   `playback.completed` and, on interruption, `speech.started` with the
   position reached. Only heard text is committed to the transcript.

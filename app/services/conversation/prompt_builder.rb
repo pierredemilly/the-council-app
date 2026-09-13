@@ -37,7 +37,7 @@ module Conversation
         "next_action" is "wait_for_user" when the last line asks the #{HUMAN_LABEL} something or clearly needs their answer; "yield_to_user" when the characters pause naturally but could go on; "continue" when the last line is addressed to another character (a question, a challenge, an invitation to react) so the group carries on without waiting for the #{HUMAN_LABEL}.
 
         ## Rules
-        - At most #{@input.max_turns} turns in total and no character speaks more than twice.
+        - At most #{@input.max_turns} turns in total and no character speaks more than twice. Not everyone has to speak: a passage with one or two lines is often the most natural answer, and a character who has nothing to add stays quiet.
         - Keep turns short and spoken; the whole passage must take well under a minute to say aloud.
         - This is a four-way conversation, not an interview. The #{HUMAN_LABEL} is one participant among four: in most passages at least one line answers, contradicts or teases another character rather than the #{HUMAN_LABEL}, and the characters pursue their own disagreements.
         - No fixed speaking order. Characters react to each other and to the #{HUMAN_LABEL}; they may interrupt one another when it feels natural.

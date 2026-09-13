@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_13_150100) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_13_151000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -69,7 +69,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_150100) do
     t.integer "max_ai_turns", default: 6, null: false
     t.integer "inactivity_reset_seconds", default: 300, null: false
     t.integer "resume_window_seconds", default: 600, null: false
-    t.integer "yield_grace_ms", default: 2500, null: false
+    t.integer "yield_grace_ms", default: 5000, null: false
     t.integer "retry_count", default: 3, null: false
     t.integer "retry_base_ms", default: 500, null: false
     t.integer "retry_max_ms", default: 4000, null: false
@@ -79,6 +79,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_13_150100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "turn_gap_ms", default: 700, null: false
+    t.integer "continue_grace_ms", default: 2000, null: false
+    t.integer "max_unprompted_segments", default: 2, null: false
   end
 
   create_table "audio_clips", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
