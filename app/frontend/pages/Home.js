@@ -5,7 +5,7 @@ import { useAuth } from "~/lib/auth";
 import { t } from "~/i18n";
 
 export default function Home() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, signupEnabled } = useAuth();
 
   if (loading) {
     return <div className="p-8 text-gray-500">Loading…</div>;
@@ -20,6 +20,12 @@ export default function Home() {
           <p className="text-gray-700">
             Signed in as <span className="font-medium">{user.email}</span>
           </p>
+          <Link
+            className="block rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            to="/admin"
+          >
+            {t("admin.open")}
+          </Link>
           <button className={buttonClass} onClick={signOut}>
             <ArrowRightOnRectangleIcon className="mr-2 h-5 w-5" />
             Sign out
@@ -33,12 +39,14 @@ export default function Home() {
           >
             Sign in
           </Link>
-          <Link
-            className="rounded-md px-4 py-2 text-sm font-semibold text-indigo-600 ring-1 ring-indigo-600 hover:bg-indigo-50"
-            to="/signup"
-          >
-            Sign up
-          </Link>
+          {signupEnabled && (
+            <Link
+              className="rounded-md px-4 py-2 text-sm font-semibold text-indigo-600 ring-1 ring-indigo-600 hover:bg-indigo-50"
+              to="/signup"
+            >
+              Sign up
+            </Link>
+          )}
         </div>
       )}
     </div>

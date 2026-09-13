@@ -12,15 +12,13 @@ function updateCsrfToken(res) {
   if (token && meta) meta.content = token;
 }
 
-async function request(url, { method = "GET", body } = {}) {
+async function request(url, { method = "GET", body, formData } = {}) {
+  const headers = { Accept: "application/json", "X-CSRF-Token": csrfToken() };
+  if (!formData) headers["Content-Type"] = "application/json";
   const res = await fetch(url, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-CSRF-Token": csrfToken(),
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers,
+    body: formData || (body ? JSON.stringify(body) : undefined),
     credentials: "same-origin",
   });
 
@@ -44,5 +42,7 @@ export const api = {
   get: (url) => request(url),
   post: (url, body) => request(url, { method: "POST", body }),
   put: (url, body) => request(url, { method: "PUT", body }),
+  patch: (url, body) => request(url, { method: "PATCH", body }),
+  putForm: (url, formData) => request(url, { method: "PUT", formData }),
   delete: (url) => request(url, { method: "DELETE" }),
 };

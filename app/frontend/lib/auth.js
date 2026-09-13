@@ -5,12 +5,16 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [signupEnabled, setSignupEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .get("/current_user")
-      .then((data) => setUser(data.user))
+      .then((data) => {
+        setUser(data.user);
+        setSignupEnabled(data.signup_enabled !== false);
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
@@ -40,7 +44,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const value = { user, loading, signIn, signUp, signOut };
+  const value = { user, loading, signupEnabled, signIn, signUp, signOut };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

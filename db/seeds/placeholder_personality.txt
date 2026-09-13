@@ -1,0 +1,1 @@
+{name} is a placeholder character. Replace this sheet in the admin with the full personality: biography, beliefs, vocabulary, conversational habits, favourite topics and the way {name} disagrees with others.

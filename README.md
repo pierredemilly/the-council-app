@@ -67,6 +67,23 @@ The admin UI is protected by Devise, set up as a JSON API consumed by React:
 - `GET /current_user` returns the signed-in user; `app/frontend/lib/auth.js` exposes `useAuth()`.
 - Visitors of the conversation itself are anonymous; they never sign in.
 
+## Admin
+
+`/admin` (Settings and Characters) is served by the React app and backed by
+`/api/admin/*`. Any signed-in Devise user is an admin; there are no other user
+roles. Create the first account with `bin/rails db:seed` after setting
+`ADMIN_EMAIL` / `ADMIN_PASSWORD`, or sign up in development. Signup is refused
+in production unless `ALLOW_SIGNUP=true`.
+
+- **Settings** edits the single live configuration (`AppConfig.current`):
+  global system prompt, LLM / STT / TTS provider and model, reasoning level,
+  turn limit, timings, retry policy, VAD thresholds and the operating-mode
+  metadata. Changes apply to new conversations only.
+- **Characters** edits the three agents (name, personality sheet, avatar,
+  voice). Voices come from the configured TTS provider through
+  `GET /api/admin/voices`, cached for 10 minutes. Set the TTS provider to
+  `fake` to explore without an ElevenLabs key.
+
 ## Site password gate
 
 `SitePasswordProtection` (included in `ApplicationController`) puts a single
