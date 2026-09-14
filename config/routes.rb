@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     resources :sessions, only: %i[create show] do
       resources :utterances, only: :create
       resources :clips, only: :show
+      resource :transcription_preview, only: :create
     end
     namespace :admin do
       resource :config, only: %i[show update]

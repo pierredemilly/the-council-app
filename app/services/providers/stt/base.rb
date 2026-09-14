@@ -10,6 +10,10 @@ module Providers
         raise NotImplementedError
       end
 
+      def live_preview(language: nil)
+        nil
+      end
+
       private
 
       attr_reader :config

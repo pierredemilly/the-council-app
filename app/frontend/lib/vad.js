@@ -32,6 +32,7 @@ export async function startMicrophone({
   onSpeechEnd,
   onMisfire,
   onProbability,
+  onFrame,
 }) {
   const vad = await MicVAD.new({
     ...vadOptions(settings),
@@ -45,9 +46,10 @@ export async function startMicrophone({
     },
     onSpeechStart,
     onVADMisfire: onMisfire,
-    onFrameProcessed: onProbability
-      ? ({ isSpeech }) => onProbability(isSpeech)
-      : undefined,
+    onFrameProcessed: ({ isSpeech }, frame) => {
+      onProbability?.(isSpeech);
+      onFrame?.(frame);
+    },
     onSpeechEnd: (audio) =>
       onSpeechEnd(
         encodeUtterance(audio),

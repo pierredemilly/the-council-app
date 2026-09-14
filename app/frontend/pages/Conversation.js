@@ -58,6 +58,7 @@ export default function Conversation() {
     leave,
     tuneVad,
     readSpeechProbability,
+    previewText,
   } = useConversation({ clientMode });
   const { user } = useAuth();
   const [publicConfig, setPublicConfig] = useState(null);
@@ -191,6 +192,7 @@ export default function Conversation() {
               positionMs={positionMs}
               large={kiosk || textOnly}
               colors={colors}
+              preview={previewText}
             />
             {state.phase !== "finalized" ? (
               <TextComposer
