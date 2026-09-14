@@ -141,6 +141,15 @@ subscription per session plus a few JSON endpoints. Everything is described in
   an audio-free mode where lines are shown at reading pace while the microphone
   and typed input keep working. Stage cues such as `[laughs]` are never
   displayed. Kiosk mode uses a larger transcript.
+- While the visitor talks, an italic **You** line shows their words as they
+  are recognised. With the OpenAI provider the browser streams the microphone to
+  the Realtime transcription API with a short-lived key minted by
+  `POST /api/sessions/:id/transcription_preview` (the main key never leaves the
+  server); the transcript of record still comes from the uploaded utterance.
+  `stt_settings` may carry `"live_preview": false` to switch the caption off,
+  `"preview_model"` to pick another streaming model (default: the STT model
+  when it is a `gpt-*` one, else `gpt-4o-mini-transcribe`) and `"preview_url"`
+  to override the WebSocket endpoint.
 - Select the `fake` LLM, TTS and STT providers in the admin to exercise the
   whole loop without keys: the fake TTS returns silent clips with synthetic word
   timings and the fake STT returns `stt_settings.fake_text`. The public page has a typed-input mode that doubles

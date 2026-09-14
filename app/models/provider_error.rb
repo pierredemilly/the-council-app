@@ -23,7 +23,7 @@
 #  fk_rails_...  (conversation_session_id => conversation_sessions.id)
 #
 class ProviderError < ApplicationRecord
-  STAGES = %w[llm parse tts stt].freeze
+  STAGES = %w[llm parse tts stt stt_preview].freeze
   MESSAGE_LIMIT = 300
 
   belongs_to :conversation_session, optional: true

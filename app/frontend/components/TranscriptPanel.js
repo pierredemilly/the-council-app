@@ -30,13 +30,14 @@ export default function TranscriptPanel({
   positionMs = 0,
   large = false,
   colors = {},
+  preview = "",
 }) {
   const bottom = useRef(null);
   const colorOf = (name) => colors[name] ?? FALLBACK_COLOR;
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
-  }, [events.length, current?.id]);
+  }, [events.length, current?.id, preview]);
 
   return (
     <section
@@ -73,6 +74,18 @@ export default function TranscriptPanel({
             {current.speaker}
           </span>
           <LiveCaption turn={current} positionMs={positionMs} />
+        </p>
+      )}
+      {preview && (
+        <p className="text-stone-300 italic" data-testid="live-preview">
+          <span
+            className="mr-2 font-semibold not-italic"
+            style={{ color: VISITOR_COLOR }}
+          >
+            {t("conversation.you")}
+          </span>
+          {preview}
+          <span className="text-stone-500">…</span>
         </p>
       )}
       <div ref={bottom} />

@@ -4,6 +4,7 @@ import { subscribeToConversation } from "~/lib/cable";
 import { initialState, playableTurn, reducer } from "~/lib/conversationMachine";
 import AudioPlayer, { SimulatedPlayer } from "~/lib/playback";
 import { retuneMicrophone, startMicrophone } from "~/lib/vad";
+import { createPreviewStream } from "~/lib/livePreview";
 import { readFlag } from "~/hooks/useQueryFlag";
 import {
   clearStoredSession,
@@ -17,6 +18,7 @@ const KIOSK_RESET_DELAY_MS = 4_000;
 const DEFAULT_TURN_GAP_MS = 700;
 const PROGRESS_MS = 1_000;
 const CAPTION_MS = 100;
+const PRE_SPEECH_FRAMES = 10;
 
 export default function useConversation({ clientMode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -25,7 +27,12 @@ export default function useConversation({ clientMode }) {
   const [micState, setMicState] = useState("off");
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [reconnectExpired, setReconnectExpired] = useState(false);
+  const [previewText, setPreviewText] = useState("");
   const mic = useRef(null);
+  const preview = useRef(null);
+  const previewSettled = useRef(false);
+  const speakingRef = useRef(false);
+  const recentFrames = useRef([]);
   const vadOverride = useRef(null);
   const speechProbability = useRef(0);
   const interruptTimer = useRef(null);
@@ -59,9 +66,47 @@ export default function useConversation({ clientMode }) {
     clearTimeout(interruptTimer.current);
     mic.current?.destroy();
     mic.current = null;
+    preview.current?.close();
+    preview.current = null;
+    speakingRef.current = false;
     setMicState("off");
     setUserSpeaking(false);
+    setPreviewText("");
   }, []);
+
+  const sessionHeaders = useCallback(() => {
+    const session = stateRef.current.session;
+    return {
+      Accept: "application/json",
+      "X-Session-Token": session?.token,
+      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
+        ?.content,
+    };
+  }, []);
+
+  // A short-lived key from the server lets this browser stream speech for a live caption; nothing is shown when the provider cannot.
+  const ensurePreview = useCallback(async () => {
+    if (preview.current?.ready) return preview.current;
+    const session = stateRef.current.session;
+    if (!session) return null;
+    preview.current?.close();
+    preview.current = null;
+    const res = await fetch(
+      `/api/sessions/${session.id}/transcription_preview`,
+      { method: "POST", headers: sessionHeaders() }
+    ).catch(() => null);
+    const data = res?.ok ? await res.json().catch(() => ({})) : {};
+    if (!data.preview || preview.current) return preview.current;
+    preview.current = createPreviewStream(data.preview, {
+      onText: (text) => {
+        if (!previewSettled.current) setPreviewText(text);
+      },
+      onClosed: () => {
+        preview.current = null;
+      },
+    });
+    return preview.current;
+  }, [sessionHeaders]);
 
   const disconnect = useCallback(() => {
     channel.current?.close();
@@ -126,6 +171,8 @@ export default function useConversation({ clientMode }) {
         body,
       });
       if (res.ok) return;
+      previewSettled.current = true;
+      setPreviewText("");
       const data = await res.json().catch(() => ({}));
       // Nothing usable was said: pick the conversation back up instead of leaving a silence.
       if (data.code === "no_speech" && interruptedByVoice.current)
@@ -149,6 +196,16 @@ export default function useConversation({ clientMode }) {
     setUserSpeaking(true);
     clearTimeout(graceTimer.current);
     interruptedByVoice.current = false;
+    speakingRef.current = true;
+    previewSettled.current = false;
+    setPreviewText("");
+    if (preview.current?.ready) {
+      preview.current.begin();
+      recentFrames.current.forEach((frame) => preview.current.push(frame));
+    } else {
+      ensurePreview();
+    }
+    recentFrames.current = [];
     const thinking = ["processing", "speaking"].includes(
       stateRef.current.phase
     );
@@ -163,11 +220,14 @@ export default function useConversation({ clientMode }) {
         interrupt();
       }, debounce);
     }
-  }, [interrupt]);
+  }, [interrupt, ensurePreview]);
 
   const handleMisfire = useCallback(() => {
     clearTimeout(interruptTimer.current);
     setUserSpeaking(false);
+    speakingRef.current = false;
+    preview.current?.cancel();
+    setPreviewText("");
     player.current.resume();
   }, []);
 
@@ -175,6 +235,8 @@ export default function useConversation({ clientMode }) {
     (blob) => {
       clearTimeout(interruptTimer.current);
       setUserSpeaking(false);
+      speakingRef.current = false;
+      preview.current?.end();
       if (
         player.current.position() ||
         stateRef.current.queue.length ||
@@ -201,12 +263,22 @@ export default function useConversation({ clientMode }) {
         onProbability: (p) => {
           speechProbability.current = p;
         },
+        onFrame: (frame) => {
+          if (speakingRef.current) {
+            preview.current?.push(frame);
+            return;
+          }
+          recentFrames.current.push(frame.slice());
+          if (recentFrames.current.length > PRE_SPEECH_FRAMES)
+            recentFrames.current.shift();
+        },
       });
       setMicState("on");
+      ensurePreview();
     } catch {
       setMicState("denied");
     }
-  }, [handleSpeechStart, handleSpeechEnd, handleMisfire]);
+  }, [handleSpeechStart, handleSpeechEnd, handleMisfire, ensurePreview]);
 
   // Live tuning by a signed-in admin: overrides the session's snapshot for this browser only.
   const tuneVad = useCallback((settings) => {
@@ -300,6 +372,13 @@ export default function useConversation({ clientMode }) {
     dispatch({ type: "CLEAR_ERROR" });
     send("turn.request", {});
   }, [send]);
+
+  // The transcript of record replaces the live caption as soon as the visitor's line is committed.
+  useEffect(() => {
+    if (state.events.at(-1)?.kind !== "human") return;
+    previewSettled.current = true;
+    setPreviewText("");
+  }, [state.events]);
 
   // Fetch and decode clips as soon as they are announced so the next one starts without a gap.
   useEffect(() => {
@@ -450,5 +529,6 @@ export default function useConversation({ clientMode }) {
     leave,
     tuneVad,
     readSpeechProbability,
+    previewText,
   };
 }

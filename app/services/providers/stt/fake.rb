@@ -6,8 +6,18 @@ module Providers
       BYTES_PER_MS = 32
 
       def transcribe(audio:, mime:, filename:, language: nil)
+        Result.new(text: fake_text, language: language || "en", duration_ms: audio.bytesize / BYTES_PER_MS)
+      end
+
+      def live_preview(language: nil)
+        Preview.new(kind: "fake", text: fake_text)
+      end
+
+      private
+
+      def fake_text
         text = config.stt_settings.is_a?(Hash) ? config.stt_settings["fake_text"].presence : nil
-        Result.new(text: text || DEFAULT_TEXT, language: language || "en", duration_ms: audio.bytesize / BYTES_PER_MS)
+        text || DEFAULT_TEXT
       end
     end
   end

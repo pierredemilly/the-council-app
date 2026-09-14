@@ -119,6 +119,8 @@ Feedback round 3 (voice): the prompt rules end with a `## Sounding human` sectio
 
 Feedback round 3 (live VAD tuning): a signed-in admin sees a **Voice detection** button on the public page. `VadTuner` reuses the admin sliders, shows the live speech probability from `onFrameProcessed`, applies changes to the running `MicVAD` through `setOptions` (an override kept in the hook, ahead of the session snapshot) and saves them through `PUT /api/admin/config`.
 
+Feedback round 3 (live transcript preview): `Providers::Stt::Base#live_preview(language:)` returns a `Preview` (nil when the adapter cannot stream). The OpenAI adapter mints an ephemeral Realtime client secret (`POST /v1/realtime/client_secrets`, transcription session, 24 kHz PCM, server VAD, same model family as the batch STT) and `POST /api/sessions/:id/transcription_preview` hands it to the browser. `lib/livePreview.js` opens the WebSocket with the key as a subprotocol, resamples the VAD's 16 kHz frames to 24 kHz PCM16, streams them only between local speech start (plus ~320 ms of pre-speech frames) and speech end, commits when the service has not closed the turn itself, and accumulates `input_audio_transcription.delta` per item. The hook shows the text as an italic **You** line until the committed human event replaces it; a misfire clears it. The fake adapter reveals `fake_text` word by word so the path runs without keys.
+
 ## 5. Frontend layout
 
 ```
