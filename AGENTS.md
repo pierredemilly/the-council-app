@@ -63,9 +63,13 @@ Rails 8 + React 19 + Vite app where one visitor talks by voice with three AI cha
 ## Conversation Conventions
 
 - Every session mutation goes through `Conversation::SessionStore.with_lock`; speculative work is pinned to `session.version` and dropped on `StaleVersion`.
-- Only heard text reaches `conversation_events`; speculative turns live in `session_turns`, audio in `audio_clips` for the session only.
-- Provider calls stay behind `Providers::{Llm,Stt,Tts}` adapters with a `Fake` twin; orchestration never sees HTTP.
-- Realtime messages are defined in `Conversation::Protocol`; the channel is transport only.
+- Only heard text reaches `conversation_events`; speculative turns live in `session_turns`, audio in `audio_clips` for the session only. No recordings are kept.
+- Provider calls stay behind `Providers::{Llm,Stt,Tts}` adapters with a `Fake` twin; orchestration never sees HTTP. Keys are environment variables; browsers only ever receive short-lived tokens.
+- Realtime messages are defined in `Conversation::Protocol`; the channel is transport only. The browser paces grace periods and playback, the server enforces caps (`max_unprompted_segments`) and validity.
+- Model output is validated by `Conversation::ScriptParser`, never trusted: it rejects bad scripts with feedback for a retry and normalises what it accepts (dashes). Prompt rules live in `PromptBuilder`; the editorial prompt is admin-editable, the rules are not.
+- Bracketed stage cues are voiced by the TTS and stripped from every display through `~/lib/captions`.
+- Client state is the pure reducer in `~/lib/conversationMachine`; `useConversation` owns side effects (cable, playback, microphone, live preview). Keep new client logic testable in the reducer or a `lib/` module.
+- Admin-tunable numbers get validated ranges on `AppConfig` and land in the config snapshot; anything that must react live in the browser (VAD) reads an override ahead of the snapshot.
 
 ## General
 
