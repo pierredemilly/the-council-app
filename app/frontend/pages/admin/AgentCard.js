@@ -12,7 +12,7 @@ export default function AgentCard({ agent, voices, onSaved }) {
   const [error, setError] = useState(null);
   const fileInput = useRef(null);
 
-  const dirty = ["name", "personality", "voice_id", "color"].some(
+  const dirty = ["name", "personality", "biography", "voice_id", "color"].some(
     (key) => (form[key] ?? "") !== (agent[key] ?? "")
   );
 
@@ -36,9 +36,10 @@ export default function AgentCard({ agent, voices, onSaved }) {
     setSaving(true);
     setError(null);
     try {
-      const { name, personality, voice_id, voice_name, color } = form;
+      const { name, personality, biography, voice_id, voice_name, color } =
+        form;
       const data = await api.patch(`/api/admin/agents/${agent.id}`, {
-        agent: { name, personality, voice_id, voice_name, color },
+        agent: { name, personality, biography, voice_id, voice_name, color },
       });
       onSaved(data.agent);
       setForm(data.agent);
@@ -177,6 +178,16 @@ export default function AgentCard({ agent, voices, onSaved }) {
             />
           </Field>
         </div>
+        <Field
+          label={t("admin.characters.biography")}
+          hint={t("admin.characters.biography_hint")}
+        >
+          <TextArea
+            value={form.biography ?? ""}
+            onChange={set("biography")}
+            rows={5}
+          />
+        </Field>
         <Field
           label={t("admin.characters.personality")}
           hint={t("admin.characters.personality_hint")}

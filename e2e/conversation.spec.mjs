@@ -144,3 +144,20 @@ test("a signed-in admin tunes voice detection live and saves it as the default",
   const config = await (await page.request.get("/api/admin/config")).json();
   expect(config.config.vad_settings.positive_speech_threshold).toBe(0.7);
 });
+
+test("a visitor opens the biography of a character that has one", async ({
+  page,
+}) => {
+  await openFresh(page);
+
+  await expect(
+    page.getByRole("button", { name: "Read Rosa's biography" })
+  ).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Read Aphra's biography" }).click();
+  const modal = page.getByRole("dialog", { name: "Aphra" });
+  await expect(modal).toContainText("Playwright, poet and spy.");
+
+  await modal.getByRole("button", { name: "Close" }).click();
+  await expect(modal).toHaveCount(0);
+});

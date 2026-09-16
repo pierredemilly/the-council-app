@@ -1,17 +1,23 @@
+import { useState } from "react";
 import { UserCircleIcon } from "@heroicons/react/24/outline";
+import CharacterModal from "~/components/CharacterModal";
+import { t } from "~/i18n";
 
 const FALLBACK_COLOR = "#f59e0b";
 
 export default function AvatarStage({ agents, speaker, size = "lg" }) {
   const dimension = size === "lg" ? "h-32 w-32 sm:h-44 sm:w-44" : "h-20 w-20";
+  const [openPosition, setOpenPosition] = useState(null);
+  const opened = agents.find((agent) => agent.position === openPosition);
 
   return (
-    <ul className="flex flex-wrap items-end justify-center gap-6 sm:gap-20">
-      {agents.map((agent) => {
-        const active = speaker === agent.name;
-        const color = agent.color ?? FALLBACK_COLOR;
-        return (
-          <li key={agent.position} className="flex flex-col items-center gap-3">
+    <>
+      <ul className="flex flex-wrap items-end justify-center gap-6 sm:gap-20">
+        {agents.map((agent) => {
+          const active = speaker === agent.name;
+          const color = agent.color ?? FALLBACK_COLOR;
+          const readable = Boolean(agent.biography?.trim());
+          const portrait = (
             <div
               className={`${dimension} overflow-hidden rounded-full bg-white ring-4 transition-all duration-300 ${
                 active ? "scale-110" : "opacity-80"
@@ -31,15 +37,41 @@ export default function AvatarStage({ agents, speaker, size = "lg" }) {
                 <UserCircleIcon className="h-full w-full text-stone-300" />
               )}
             </div>
-            <span
-              className="text-lg font-medium"
-              style={{ color: active ? color : "#e7e5e4" }}
+          );
+
+          return (
+            <li
+              key={agent.position}
+              className="flex flex-col items-center gap-3"
             >
-              {agent.name}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+              {readable ? (
+                <button
+                  type="button"
+                  onClick={() => setOpenPosition(agent.position)}
+                  aria-label={t("conversation.biography.open", {
+                    name: agent.name,
+                  })}
+                  className="cursor-pointer rounded-full"
+                >
+                  {portrait}
+                </button>
+              ) : (
+                portrait
+              )}
+              <span
+                className="text-lg font-medium"
+                style={{ color: active ? color : "#e7e5e4" }}
+              >
+                {agent.name}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {opened && (
+        <CharacterModal agent={opened} onClose={() => setOpenPosition(null)} />
+      )}
+    </>
   );
 }

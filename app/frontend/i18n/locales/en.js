@@ -106,6 +106,9 @@ export const en = {
       personality: "Personality sheet",
       personality_hint:
         "Long-form. Biography, beliefs, vocabulary, habits, how this character disagrees.",
+      biography: "Public biography",
+      biography_hint:
+        "Shown to visitors when they tap the avatar. Leave empty to make the avatar unclickable.",
       upload_avatar: "Upload avatar",
       remove_avatar: "Remove avatar",
       color: "Colour",
@@ -135,6 +138,10 @@ export const en = {
     },
   },
   conversation: {
+    biography: {
+      open: "Read {name}'s biography",
+      close: "Close",
+    },
     idle_hint:
       "Three characters are waiting for you. Start the conversation and speak first: they will answer.",
     title: "You stand before the council.",

@@ -29,6 +29,15 @@ RSpec.describe "Admin agents API", type: :request do
     expect(aphra.reload).to have_attributes(name: "Aphra Behn", personality: "Restoration playwright.", voice_id: "v1", voice_name: "Aria")
   end
 
+  it "updates the public biography" do
+    sign_in_as(admin)
+    patch "/api/admin/agents/#{aphra.id}", params: { agent: { biography: "Playwright and spy." } }, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(json.dig("agent", "biography")).to eq("Playwright and spy.")
+    expect(aphra.reload.biography).to eq("Playwright and spy.")
+  end
+
   it "rejects a duplicate name" do
     sign_in_as(admin)
     patch "/api/admin/agents/#{aphra.id}", params: { agent: { name: "rosa" } }, as: :json
