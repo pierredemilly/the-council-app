@@ -105,20 +105,17 @@ export default function Conversation() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-stone-900 via-stone-950 to-black px-4 py-8 text-center text-stone-100">
-      <main className="flex flex-1 flex-col items-center justify-center gap-8">
+      <main className="flex flex-1 flex-col items-center justify-center gap-12">
         <AvatarStage agents={agents} speaker={state.current?.speaker ?? null} />
 
         {!active && (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-12">
             <h1 className="text-3xl font-semibold tracking-tight">
-              {t("app.name")}
+              {t("conversation.title")}
             </h1>
-            <p className="max-w-md text-stone-400">
-              {t("conversation.idle_hint")}
-            </p>
             <button
               onClick={handleStart}
-              className="flex items-center gap-3 rounded-full bg-amber-400 px-8 py-4 text-lg font-semibold text-stone-900 shadow-lg hover:bg-amber-300"
+              className="flex cursor-pointer items-center gap-3 rounded-full border-2 border-white px-8 py-4 text-lg font-semibold text-white shadow-lg transition-colors hover:bg-white/20"
             >
               <MicrophoneIcon className="h-6 w-6" />
               {t("conversation.start")}

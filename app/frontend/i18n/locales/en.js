@@ -137,7 +137,8 @@ export const en = {
   conversation: {
     idle_hint:
       "Three characters are waiting for you. Start the conversation and speak first: they will answer.",
-    start: "Start conversation",
+    title: "You stand before the council.",
+    start: "Ask a question",
     speak_first:
       "Say something to begin. The characters answer once you have spoken.",
     type_placeholder: "Type what you want to say…",
