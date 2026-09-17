@@ -10,6 +10,7 @@ namespace :e2e do
     )
     User.find_or_create_by!(email: "admin@example.com") { |user| user.password = "password123" }
     Agent.ordered.each_with_index { |agent, index| agent.update!(voice_id: %w[fake-alto fake-mezzo fake-tenor][index]) }
+    Agent.ordered.first.update!(biography: "Playwright, poet and spy.")
     ConversationSession.destroy_all
   end
 end

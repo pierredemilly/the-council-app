@@ -5,6 +5,7 @@ require "rails_helper"
 # Table name: agents
 #
 #  id          :bigint           not null, primary key
+#  biography   :text             default(""), not null
 #  color       :string
 #  name        :string           not null
 #  personality :text             default(""), not null
@@ -51,6 +52,13 @@ RSpec.describe Agent, type: :model do
     agent.avatar.attach(io: file_fixture("avatar.txt").open, filename: "avatar.txt", content_type: "text/plain")
     expect(agent).not_to be_valid
     expect(agent.errors[:avatar]).to be_present
+  end
+
+  it "starts with an empty biography and caps its length" do
+    expect(agent.biography).to eq("")
+    agent.biography = "a" * (Agent::BIOGRAPHY_CHAR_LIMIT + 1)
+    expect(agent).not_to be_valid
+    expect(agent.errors[:biography]).to be_present
   end
 
   it "gets a palette colour by position and validates custom ones" do

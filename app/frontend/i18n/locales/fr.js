@@ -108,6 +108,9 @@ export const fr = {
       personality: "Fiche de personnalité",
       personality_hint:
         "Format long. Biographie, convictions, vocabulaire, habitudes, façon de contredire les autres.",
+      biography: "Biographie publique",
+      biography_hint:
+        "Affichée aux visiteurs quand ils touchent l\u2019avatar. Laissez vide pour rendre l\u2019avatar non cliquable.",
       upload_avatar: "Téléverser un avatar",
       remove_avatar: "Retirer l’avatar",
       color: "Couleur",
@@ -139,6 +142,10 @@ export const fr = {
     },
   },
   conversation: {
+    biography: {
+      open: "Lire la biographie de {name}",
+      close: "Fermer",
+    },
     idle_hint:
       "Trois personnages vous attendent. Lancez la conversation et parlez en premier : ils vous répondront.",
     start: "Commencer la conversation",

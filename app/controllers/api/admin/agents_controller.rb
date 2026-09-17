@@ -37,7 +37,7 @@ module Api
       end
 
       def agent_params
-        params.require(:agent).permit(:name, :personality, :voice_id, :voice_name, :color)
+        params.require(:agent).permit(:name, :personality, :biography, :voice_id, :voice_name, :color)
       end
     end
   end
