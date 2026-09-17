@@ -67,7 +67,7 @@ test("reloading resumes the same conversation; a later visit starts a new one", 
   });
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Start conversation" })
+    page.getByRole("button", { name: "Ask a question" })
   ).toBeVisible();
 });
 
@@ -86,7 +86,7 @@ test("kiosk mode hides the footer and returns to the idle screen after inactivit
     timeout: 50_000,
   });
   await expect(
-    page.getByRole("button", { name: "Start conversation" })
+    page.getByRole("button", { name: "Ask a question" })
   ).toBeVisible({ timeout: 15_000 });
 });
 

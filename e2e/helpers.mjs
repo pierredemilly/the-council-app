@@ -11,7 +11,7 @@ export async function openFresh(page, path = "/?simulateAudio=true") {
 }
 
 export async function startConversation(page) {
-  await page.getByRole("button", { name: "Start conversation" }).click();
+  await page.getByRole("button", { name: "Ask a question" }).click();
   await expect(page.locator(STATUS).first()).toHaveText(/Listening/);
 }
 
